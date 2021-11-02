@@ -10,14 +10,14 @@ import InputBase from "@mui/material/InputBase";
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
-})(({ theme, open, drawerWidth }) => ({
+})(({ theme, open, width }) => ({
   transition: theme.transitions.create(["margin", "width"], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
   ...(open && {
-    width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: `${drawerWidth}px`,
+    width: `calc(100% - ${width}px)`,
+    marginLeft: `${width}px`,
     transition: theme.transitions.create(["margin", "width"], {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
@@ -36,7 +36,8 @@ const Search = styled("div")(({ theme }) => ({
   marginLeft: 0,
   width: "100%",
   [theme.breakpoints.up("sm")]: {
-    marginLeft: theme.spacing(3),
+    // marginLeft: theme.spacing(3),
+    marginLeft: "auto",
     width: "auto",
   },
 }));
@@ -65,20 +66,21 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
   },
 }));
 
-export default function Header(drawerWidth, handleDrawerOpen) {
-  const [open, setOpen] = useState(false);
+export default function Header(props) {
+  const open = props.open;
+  console.log(props.width);
 
-  //   const handleDrawerOpen = () => {
-  //     setOpen(true);
-  //   };
+  const drawerOpen = () => {
+    props.handleDrawerOpen();
+  };
 
   return (
-    <AppBar position="fixed" open={open} drawerWidth={drawerWidth}>
+    <AppBar position="fixed" open={open} width={props.width}>
       <Toolbar>
         <IconButton
           color="inherit"
           aria-label="open drawer"
-          onClick={handleDrawerOpen}
+          onClick={drawerOpen}
           edge="start"
           sx={{ mr: 2, ...(open && { display: "none" }) }}
         >

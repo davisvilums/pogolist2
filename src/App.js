@@ -60,7 +60,7 @@ export default function PersistentDrawerLeft() {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <Header width={drawerWidth} handleDrawerOpen={handleDrawerOpen} />
+      <Header width={drawerWidth} open={open} handleDrawerOpen={handleDrawerOpen} />
       <Drawer
         sx={{
           width: drawerWidth,
@@ -112,7 +112,7 @@ export default function PersistentDrawerLeft() {
           ))}
         </List>
       </Drawer>
-      <Main open={open}>
+      <Main open={open} width={drawerWidth}>
         <DrawerHeader />
         <Typography paragraph>
           Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
