@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { styled, useTheme, alpha } from "@mui/material/styles";
+import { styled, alpha } from "@mui/material/styles";
 import MuiAppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -68,7 +67,6 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 export default function Header(props) {
   const open = props.open;
-  console.log(props.width);
 
   const drawerOpen = () => {
     props.handleDrawerOpen();
