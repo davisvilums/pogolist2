@@ -41,9 +41,10 @@ const DrawerHeader = styled("div")(({ theme }) => ({
 }));
 
 export default function PersistentDrawerLeft() {
-  const drawerWidth = 300;
+  const drawerWidth = 320;
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
+  const data = JSON.parse(localStorage.getItem("pokelist"));
 
   const handleDrawerClose = () => {
     setOpen(false);
@@ -79,7 +80,7 @@ export default function PersistentDrawerLeft() {
       </Drawer>
       <Main open={open} width={drawerWidth}>
         <DrawerHeader />
-        <Body />
+        <Body open={open} data={data} />
       </Main>
     </Box>
   );

@@ -1,0 +1,79 @@
+import { useEffect, useState } from "react";
+import Chip from "@mui/material/Chip";
+// import DoneIcon from "@mui/icons/Done";
+import Tooltip from "@mui/material/Tooltip";
+import Stack from "@mui/material/Stack";
+import Box from "@mui/material/Box";
+
+const filtersList = {
+  released: true,
+  unreleased: false,
+  normal: true,
+  legendary: false,
+  mythical: false,
+  mega: false,
+  baby: true,
+  gmax: false,
+  g1: true,
+  g2: true,
+  g3: true,
+  g4: true,
+  g5: true,
+  g6: true,
+  g7: true,
+  g8: true,
+};
+
+const runFilters = (pl, filters) => {
+  // console.log(pl, filters);
+  if (filters) {
+    if (!filters["normal"]) pl = pl.filter((p) => p.tags.length);
+    if (!filters["mega"]) pl = pl.filter((p) => !p.tags.includes("mega"));
+    if (!filters["gmax"]) pl = pl.filter((p) => !p.tags.includes("gmax"));
+    if (!filters["legendary"]) pl = pl.filter((p) => !p.tags.includes("legendary"));
+    if (!filters["mythical"]) pl = pl.filter((p) => !p.tags.includes("mythical"));
+    if (!filters["baby"]) pl = pl.filter((p) => !p.tags.includes("baby"));
+    if (!filters["unreleased"]) pl = pl.filter((p) => p.released);
+    if (!filters["released"]) pl = pl.filter((p) => !p.released);
+    if (!filters["g1"]) pl = pl.filter((p) => p.gen !== 1);
+    if (!filters["g2"]) pl = pl.filter((p) => p.gen !== 2);
+    if (!filters["g3"]) pl = pl.filter((p) => p.gen !== 3);
+    if (!filters["g4"]) pl = pl.filter((p) => p.gen !== 4);
+    if (!filters["g5"]) pl = pl.filter((p) => p.gen !== 5);
+    if (!filters["g6"]) pl = pl.filter((p) => p.gen !== 6);
+    if (!filters["g7"]) pl = pl.filter((p) => p.gen !== 7);
+    if (!filters["g8"]) pl = pl.filter((p) => p.gen !== 8);
+  }
+  return pl;
+};
+
+const TagFilters = ({ filtersList, setFilters }) => {
+  const [filters, setFilter] = useState(filtersList);
+
+  useEffect(() => {
+    if (setFilters) setFilters(filters);
+  }, [filters]);
+
+  const handleClick = (value) => {
+    const nf = Object.assign({}, filters);
+    nf[value] = !filters[value];
+    setFilter(nf);
+  };
+
+  return (
+    // <Stack direction="row" spacing={1}>
+    <Box sx={{ display: "flex", justifyContent: "center", flexWrap: "wrap", pb: "5px" }}>
+      {filters &&
+        Object.keys(filters).map((f) => (
+          <Chip
+            label={f}
+            clickable
+            color={filters[f] ? "primary" : "default"}
+            onClick={() => handleClick(f)}
+            sx={{ margin: "1px 2px" }}
+          />
+        ))}
+    </Box>
+  );
+};
+export { filtersList, TagFilters, runFilters };

@@ -45,6 +45,7 @@ const PokemonSpriteWrap = styled("div")`
   justify-content: center;
   align-items: flex-start;
   padding-top: 5px;
+  min-height: 104px;
   & img {
     max-width: 100%;
     max-height: 100px;
