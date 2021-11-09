@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import Chip from "@mui/material/Chip";
-// import DoneIcon from "@mui/icons/Done";
-import Tooltip from "@mui/material/Tooltip";
-import Stack from "@mui/material/Stack";
 import Box from "@mui/material/Box";
 
 const filtersList = {
@@ -62,15 +59,16 @@ const TagFilters = ({ filtersList, setFilters }) => {
 
   return (
     // <Stack direction="row" spacing={1}>
-    <Box sx={{ display: "flex", justifyContent: "center", flexWrap: "wrap", pb: "5px" }}>
+    <Box sx={{ display: "flex", justifyContent: "center", flexWrap: "wrap", pb: "2px" }}>
       {filters &&
         Object.keys(filters).map((f) => (
           <Chip
+            key={f}
             label={f}
             clickable
             color={filters[f] ? "primary" : "default"}
             onClick={() => handleClick(f)}
-            sx={{ margin: "1px 2px" }}
+            sx={{ margin: "0 2px 5px" }}
           />
         ))}
     </Box>

@@ -98,6 +98,7 @@ export default function ToolbarPoke(props) {
     order,
     orderBy,
     toggleFilters,
+    title,
   } = props;
 
   return (
@@ -128,13 +129,13 @@ export default function ToolbarPoke(props) {
           </Typography>
         ) : (
           <Typography variant="h6" id="tableTitle" component="div">
-            Pokedex
+            {title}
           </Typography>
         )}
       </Box>
       <Box
         sx={{
-          margin: "0 auto",
+          ml: "auto",
           order: { xs: 1, sm: "initial" },
           width: { xs: "100%", sm: "initial" },
         }}
@@ -146,7 +147,6 @@ export default function ToolbarPoke(props) {
             sx={{
               padding: "0 15px",
               width: "inital !important",
-              margin: "0 auto",
               border: "none",
             }}
           >
@@ -162,7 +162,7 @@ export default function ToolbarPoke(props) {
         </TableContainer>
       </Box>
 
-      <Box sx={{ ml: "auto" }}>
+      <Box sx={{ ml: 2 }}>
         {numSelected > 0 ? (
           <Tooltip title="Delete">
             <IconButton>
@@ -171,8 +171,8 @@ export default function ToolbarPoke(props) {
           </Tooltip>
         ) : (
           <Tooltip title="Filter list">
-            <IconButton>
-              <FilterListIcon onClick={() => toggleFilters()} />
+            <IconButton onClick={toggleFilters}>
+              <FilterListIcon />
             </IconButton>
           </Tooltip>
         )}

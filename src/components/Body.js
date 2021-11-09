@@ -1,5 +1,4 @@
 import * as React from "react";
-import TablePagination from "@mui/material/TablePagination";
 import Paper from "@mui/material/Paper";
 import { styled } from "@mui/material/styles";
 import PokemonCard from "./PokemonCard";
@@ -43,37 +42,25 @@ function stableSort(array, comparator) {
   return stabilizedThis.map((el) => el[0]);
 }
 
-export default function Body(props) {
+export default function Body({ data, list, updateSelected }) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
   const [selected, setSelected] = React.useState([]);
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [itemsPerPage, setItemsPerPage] = React.useState(50);
-  const [itemsPerCol, setItemsPerCol] = React.useState(10);
-  const [totalRows, setTotalRows] = React.useState(50);
   const [showfilters, setShowFilters] = React.useState(false);
   const [filters, setFilters] = React.useState(filtersList);
-  const [rows, setRows] = React.useState(props.data);
-  const [open, setOpen] = React.useState(props.open);
+  const [rows, setRows] = React.useState(data);
   const ref = React.useRef(null);
-
-  React.useEffect(() => {
-    setOpen(props.open);
-  }, [props.open]);
 
   React.useMemo(() => {
     if (!rows) return "";
-    let pl = props.data;
+    let pl = data;
 
     pl = runFilters(pl, filters);
 
     setRows(pl);
   }, [filters]);
-
-  React.useEffect(() => {
-    console.log("rows", rows);
-  }, [rows]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -83,19 +70,19 @@ export default function Body(props) {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n.name);
+      const newSelecteds = rows.map((n) => n.id);
       setSelected(newSelecteds);
       return;
     }
     setSelected([]);
   };
 
-  const handleClick = (event, name) => {
-    const selectedIndex = selected.indexOf(name);
+  const handleClick = (event, id) => {
+    const selectedIndex = selected.indexOf(id);
     let newSelected = [];
 
     if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, name);
+      newSelected = newSelected.concat(selected, id);
     } else if (selectedIndex === 0) {
       newSelected = newSelected.concat(selected.slice(1));
     } else if (selectedIndex === selected.length - 1) {
@@ -108,13 +95,21 @@ export default function Body(props) {
     }
 
     setSelected(newSelected);
+    updateSelected(newSelected);
   };
 
-  const isSelected = (name) => selected.indexOf(name) !== -1;
+  const isSelected = (id) => selected.indexOf(id) !== -1;
+
+  let title = "Pokedex";
+  if (list) {
+    let obj = list.find((o) => o.selected === true);
+    if (obj) title = obj.name;
+  }
 
   return (
     <Paper sx={{ width: "100%", mb: 2 }}>
       <Toolbar
+        title={title}
         numSelected={selected.length}
         rowCount={rows.length}
         handleSelectAllClick={handleSelectAllClick}
@@ -129,13 +124,13 @@ export default function Body(props) {
         {stableSort(rows, getComparator(order, orderBy))
           .slice(page * itemsPerPage, page * itemsPerPage + itemsPerPage)
           .map((row, index) => {
-            const isItemSelected = isSelected(row.name);
+            const isItemSelected = isSelected(row.id);
 
             return (
               <PokemonCard
                 pokemon={row}
                 key={row.name}
-                select={(event) => handleClick(event, row.name)}
+                select={(event) => handleClick(event, row.id)}
                 key={row.name}
                 selected={isItemSelected}
               />

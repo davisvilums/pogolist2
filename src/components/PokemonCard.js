@@ -81,10 +81,7 @@ const PokemonCP = styled("div")`
   line-height: 1em;
 `;
 
-function PokemonCard(props) {
-  var pokemon = props.pokemon;
-  var selected = props.selected;
-  var select = props.select;
+function PokemonCard({ pokemon, selected, select }) {
   var TitleSize = "15px";
 
   if (pokemon.name.length > 15) {
@@ -97,7 +94,7 @@ function PokemonCard(props) {
 
   return (
     <PokemonItem className={selected ? "selected" : ""} onClick={select}>
-      {selected}
+      {/* {selected} */}
       <PokemonID>#{pokemon.id}</PokemonID>
       <PokemonGeneration>G{pokemon.gen}</PokemonGeneration>
       <PokemonSpriteWrap>
