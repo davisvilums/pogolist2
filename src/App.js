@@ -41,22 +41,35 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   justifyContent: "flex-start",
 }));
 
+const listD = [
+  {
+    name: "Collection",
+    selected: false,
+    visibility: 1,
+    pokemon: [],
+  },
+];
+
 export default function PersistentDrawerLeft() {
   const drawerWidth = 320;
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
   const [edit, setEdit] = React.useState(false);
-  const [list, setList] = React.useState(false);
+  const [list, setList] = React.useState(JSON.parse(localStorage.getItem("collection")) || listD);
+  const [update, setUpdate] = React.useState(true);
+  const [selected, setSelected] = React.useState([]);
   const data = JSON.parse(localStorage.getItem("pokelist"));
 
   const handleDrawerClose = () => {
+    const newList = list.map((item) => {
+      item["selected"] = false;
+      return item;
+    });
+    setList(newList);
     setOpen(false);
   };
   const handleDrawerOpen = () => {
     setOpen(true);
-  };
-  const updateList = (l) => {
-    setList(l);
   };
   const updateSelected = (l) => {
     let obj = list.find((o) => o.selected === true);
@@ -64,11 +77,19 @@ export default function PersistentDrawerLeft() {
     if (obj) {
       let i = list.indexOf(obj);
       list[i].pokemon = l;
+      setList(list);
+      setUpdate(!update);
     }
-    // console.log("l", list, obj, l);
-    setList(list);
-    console.log(list);
   };
+  React.useEffect(() => {
+    let obj = list.find((o) => o.selected === true);
+    if (obj) {
+      setSelected(obj);
+    } else {
+      setSelected({});
+    }
+    localStorage.setItem("collection", JSON.stringify(list));
+  }, [list, update]);
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -98,11 +119,11 @@ export default function PersistentDrawerLeft() {
           </Tooltip>
         </DrawerHeader>
         <Divider />
-        <Sidebar edit={edit} updateList={updateList} />
+        <Sidebar edit={edit} setList={setList} list={list} />
       </Drawer>
       <Main open={open} width={drawerWidth}>
         <DrawerHeader />
-        <Body data={data} list={list} updateSelected={updateSelected} />
+        <Body data={data} list={list} selected={selected} setSelected={updateSelected} />
       </Main>
     </Box>
   );

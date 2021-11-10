@@ -42,10 +42,9 @@ function stableSort(array, comparator) {
   return stabilizedThis.map((el) => el[0]);
 }
 
-export default function Body({ data, list, updateSelected }) {
+export default function Body({ data, list, selected, setSelected }) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
-  const [selected, setSelected] = React.useState([]);
   const [page, setPage] = React.useState(0);
   const [itemsPerPage, setItemsPerPage] = React.useState(50);
   const [showfilters, setShowFilters] = React.useState(false);
@@ -69,36 +68,45 @@ export default function Body({ data, list, updateSelected }) {
   };
 
   const handleSelectAllClick = (event) => {
-    if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n.id);
-      setSelected(newSelecteds);
-      return;
-    }
-    setSelected([]);
+    // if (event.target.checked) {
+    //   const newSelecteds = rows.map((n) => n.id);
+    //   setSelected(newSelecteds);
+    //   return;
+    // }
+    // setSelected([]);
   };
 
   const handleClick = (event, id) => {
-    const selectedIndex = selected.indexOf(id);
-    let newSelected = [];
+    if (selected.pokemon) {
+      const sl = { ...selected };
+      const pokemon = sl.pokemon;
+      const selectedIndex = pokemon.indexOf(id);
+      let newPokelist = [];
 
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, id);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1)
-      );
+      if (selectedIndex === -1) {
+        newPokelist = newPokelist.concat(pokemon, id);
+      } else if (selectedIndex === 0) {
+        newPokelist = newPokelist.concat(pokemon.slice(1));
+      } else if (selectedIndex === pokemon.length - 1) {
+        newPokelist = newPokelist.concat(pokemon.slice(0, -1));
+      } else if (selectedIndex > 0) {
+        newPokelist = newPokelist.concat(
+          pokemon.slice(0, selectedIndex),
+          pokemon.slice(selectedIndex + 1)
+        );
+      }
+      sl.pokemon = newPokelist;
+      setSelected(newPokelist);
     }
-
-    setSelected(newSelected);
-    updateSelected(newSelected);
   };
 
-  const isSelected = (id) => selected.indexOf(id) !== -1;
+  // const isSelected = (id) => selected.pokemon.indexOf(id) !== -1 ? true: false;
+  const isSelected = (id) => {
+    if (!selected.pokemon) return false;
+    else return selected.pokemon.indexOf(id) !== -1;
+    // console.log(selected.pokemon);
+    // return 1;
+  };
 
   let title = "Pokedex";
   if (list) {

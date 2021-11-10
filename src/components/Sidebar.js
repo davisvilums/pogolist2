@@ -19,34 +19,18 @@ import IconPlus from "@mui/icons-material/ControlPoint";
 import IconCross from "@mui/icons-material/CancelOutlined";
 import IconCheck from "@mui/icons-material/CheckCircleOutlined";
 import IconEmpty from "@mui/icons-material/RadioButtonUncheckedOutlined";
+import IconFull from "@mui/icons-material/RadioButtonChecked";
+import IconRemove from "@mui/icons-material/RemoveCircleOutline";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import IconBox from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckIcon from "@mui/icons-material/Check";
+import ArrowRightIcon from "@mui/icons-material/ArrowForwardIos";
+import RemoveIcon from "@mui/icons-material/Remove";
 
-// {index % 3 === 0 ? <IconCheck /> : index % 3 === 1 ? <IconCross /> : <IconEmpty />}
-
-const listD = [
-  {
-    name: "Robin",
-    selected: false,
-    visibility: 1,
-  },
-  {
-    name: "Dennis",
-    selected: false,
-    visibility: 0,
-  },
-];
-
-export default function Sidebar({ edit, updateList }) {
-  const [list, setList] = useState(listD);
+export default function Sidebar({ edit, list, setList }) {
   const [name, setName] = useState("");
 
   const textInput = useRef(null);
-
-  useEffect(() => {
-    updateList(list);
-  }, [list]);
-
-  // setCollectoion((list) => [...list, "somedata"]);
-  // setItem((prevCol) => [...prevCol, "somedata"]);
 
   const handleChange = (event) => {
     setName(event.target.value);
@@ -58,7 +42,7 @@ export default function Sidebar({ edit, updateList }) {
   };
   const handleAdd = () => {
     if (name !== "") {
-      const newList = list.concat({ name: name, visibility: 0, selected: false });
+      const newList = list.concat({ name: name, visibility: 0, selected: false, pokemon: [] });
       setList(newList);
       setName("");
       if (textInput.current) textInput.current.focus();
@@ -87,9 +71,7 @@ export default function Sidebar({ edit, updateList }) {
   const handleVisibility = (index) => {
     const newList = [...list];
     const vis = (newList[index]["visibility"] + 1) % 3;
-    // console.log(newList[index]["visibility"], vis);
     newList[index]["visibility"] = vis;
-    // console.log(newList);
     setList(newList);
   };
 
@@ -110,16 +92,19 @@ export default function Sidebar({ edit, updateList }) {
             onClick={() => handleSelect(index)}
             secondaryAction={
               edit ? (
-                <IconButton
-                  aria-label="delete"
-                  size="small"
-                  onClick={(e) => {
-                    handleRemove(index);
-                    e.stopPropagation();
-                  }}
-                >
-                  <DeleteIcon />
-                </IconButton>
+                <Tooltip title="Remove" placement="left">
+                  <IconButton
+                    aria-label="delete"
+                    size="small"
+                    onClick={(e) => {
+                      handleRemove(index);
+                      e.stopPropagation();
+                    }}
+                  >
+                    <IconRemove color="error" />
+                    {/* <DeleteIcon /> */}
+                  </IconButton>
+                </Tooltip>
               ) : (
                 <IconButton
                   size="small"
@@ -135,7 +120,13 @@ export default function Sidebar({ edit, updateList }) {
               )
             }
           >
-            <DragHandleIcon className="drag" />
+            {edit ? (
+              <DragHandleIcon className="drag" />
+            ) : (
+              <>
+                {item.selected ? <IconFull color="primary" /> : <IconEmpty sx={{ opacity: 0.5 }} />}
+              </>
+            )}
             {edit ? (
               <TextField
                 hiddenLabel
@@ -143,11 +134,11 @@ export default function Sidebar({ edit, updateList }) {
                 variant="standard"
                 value={item.name}
                 fullWidth
-                sx={{ mr: 1 }}
+                sx={{ mr: 1, ml: 1 }}
                 onChange={(e) => handleRename(e, index)}
               />
             ) : (
-              <ListItemText primary={item.name} />
+              <ListItemText primary={item.name} sx={{ ml: 1 }} />
             )}
           </ListItem>
         ))}

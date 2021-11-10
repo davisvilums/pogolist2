@@ -1,6 +1,7 @@
 import * as React from "react";
 import { styled, useTheme, alpha } from "@mui/material/styles";
 import { Box, ThemeProvider, createTheme } from "@mui/system";
+import Check from "@mui/icons-material/CheckBox";
 // import styled from "styled-components";
 
 const PokemonItem = styled("div")`
@@ -96,7 +97,9 @@ function PokemonCard({ pokemon, selected, select }) {
     <PokemonItem className={selected ? "selected" : ""} onClick={select}>
       {/* {selected} */}
       <PokemonID>#{pokemon.id}</PokemonID>
-      <PokemonGeneration>G{pokemon.gen}</PokemonGeneration>
+      <PokemonGeneration>
+        {selected ? <Check color="primary" /> : "G" + pokemon.gen}
+      </PokemonGeneration>
       <PokemonSpriteWrap>
         <img src={pokemon.sprite} alt="" />
       </PokemonSpriteWrap>
