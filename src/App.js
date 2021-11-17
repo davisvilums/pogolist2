@@ -62,14 +62,39 @@ export default function PersistentDrawerLeft() {
   const [update, setUpdate] = React.useState(true);
   const [selected, setSelected] = React.useState([]);
   const [showCollections, setCollections] = React.useState(false);
-  const data = JSON.parse(localStorage.getItem("pokelist"));
+  const [pokemonData, setPokemonData] = React.useState(
+    JSON.parse(localStorage.getItem("pokelist")) || ""
+  );
+
+  React.useEffect(async () => {
+    if (!pokemonData) {
+      var pokelist;
+      fetch("./data/pokelist.json")
+        .then((response) => response.json())
+        .then((data) => {
+          pokelist = data.pokelist;
+
+          fetch("./data/released.json")
+            .then((response) => response.json())
+            .then((data) => {
+              const result = pokelist.map((item) => {
+                // if (data.released.includes(item.id)) item.released = true;
+                item.released = data.released.includes(item.id);
+                return item;
+              });
+              setPokemonData(result);
+              // localStorage.setItem("pokelist", JSON.stringify(result));
+            });
+        });
+    }
+    // if (!pokemonData) {
+    //   let newPokeList = await GetDataGrahp();
+    //   setPokemonData(newPokeList);
+    //   localStorage.setItem("pokelist", JSON.stringify(newPokeList));
+    // }
+  }, []);
 
   const handleDrawerClose = () => {
-    // const newList = list.map((item) => {
-    //   item["selected"] = false;
-    //   return item;
-    // });
-    // setList(newList);
     setOpen(false);
   };
   const handleDrawerOpen = () => {
@@ -149,14 +174,16 @@ export default function PersistentDrawerLeft() {
       </Drawer>
       <Main open={open} width={drawerWidth}>
         <DrawerHeader />
-        <Body
-          data={data}
-          list={list}
-          selected={selected}
-          setSelected={updateSelected}
-          showCollections={showCollections}
-          toggleCollections={handleCollections}
-        />
+        {pokemonData && (
+          <Body
+            data={pokemonData}
+            list={list}
+            selected={selected}
+            setSelected={updateSelected}
+            showCollections={showCollections}
+            toggleCollections={handleCollections}
+          />
+        )}
       </Main>
     </Box>
   );

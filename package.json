@@ -9,12 +9,14 @@
     "eject": "react-scripts eject"
   },
   "dependencies": {
+    "@apollo/client": "^3.4.17",
     "@emotion/react": "latest",
     "@emotion/styled": "latest",
     "@mui/icons-material": "^5.1.0",
     "@mui/material": "^5.1.0",
     "@mui/system": "^5.1.0",
     "array-move": "^4.0.0",
+    "graphql": "^16.0.1",
     "react": "latest",
     "react-dom": "latest",
     "react-scripts": "latest",
