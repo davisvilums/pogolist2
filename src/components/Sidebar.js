@@ -30,12 +30,12 @@ import ArrowRightIcon from "@mui/icons-material/ArrowForwardIos";
 import RemoveIcon from "@mui/icons-material/Remove";
 
 export default function Sidebar({ edit, list, setList, showCollections }) {
-  const [name, setName] = useState("");
+  const [text, setText] = useState("");
 
   const textInput = useRef(null);
 
   const handleChange = (event) => {
-    setName(event.target.value);
+    setText(event.target.value);
   };
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -43,10 +43,10 @@ export default function Sidebar({ edit, list, setList, showCollections }) {
     }
   };
   const handleAdd = () => {
-    if (name !== "") {
-      const newList = list.concat({ name: name, visibility: false, selected: false, pokemon: [] });
+    if (text !== "") {
+      const newList = list.concat({ text: text, visibility: false, selected: false, pokemon: [] });
       setList(newList);
-      setName("");
+      setText("");
       if (textInput.current) textInput.current.focus();
     }
   };
@@ -67,7 +67,7 @@ export default function Sidebar({ edit, list, setList, showCollections }) {
   const handleRename = (event, index) => {
     const newList = [...list];
     // console.log(newList, index);
-    newList[index]["name"] = event.target.value;
+    newList[index]["text"] = event.target.value;
     setList(newList);
   };
   const handleVisibility = (index) => {
@@ -159,13 +159,13 @@ export default function Sidebar({ edit, list, setList, showCollections }) {
                     hiddenLabel
                     placeholder="Add Collection"
                     variant="standard"
-                    value={item.name}
+                    value={item.text}
                     fullWidth
                     sx={{ mr: 1, ml: 1 }}
                     onChange={(e) => handleRename(e, index)}
                   />
                 ) : (
-                  <ListItemText primary={item.name} sx={{ ml: 1 }} />
+                  <ListItemText primary={item.text} sx={{ ml: 1 }} />
                 )}
               </ListItem>
             </Draggable>
@@ -176,7 +176,7 @@ export default function Sidebar({ edit, list, setList, showCollections }) {
             hiddenLabel
             placeholder="Add Collection"
             variant="filled"
-            value={name}
+            value={text}
             size="small"
             fullWidth
             sx={{ mr: 1 }}
@@ -188,9 +188,9 @@ export default function Sidebar({ edit, list, setList, showCollections }) {
             aria-label="Add"
             size="small"
             onClick={handleAdd}
-            disabled={name ? false : true}
+            disabled={text ? false : true}
           >
-            <IconPlus color={name ? "primary" : "default"} />
+            <IconPlus color={text ? "primary" : "default"} />
           </IconButton>
         </ListItem>
       </List>
