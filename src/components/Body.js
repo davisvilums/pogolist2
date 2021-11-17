@@ -42,12 +42,20 @@ function stableSort(array, comparator) {
   return stabilizedThis.map((el) => el[0]);
 }
 
-export default function Body({ data, list, selected, setSelected }) {
+export default function Body({
+  data,
+  list,
+  selected,
+  setSelected,
+  showCollections,
+  toggleCollections,
+}) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
   const [page, setPage] = React.useState(0);
   const [itemsPerPage, setItemsPerPage] = React.useState(50);
   const [showfilters, setShowFilters] = React.useState(false);
+  const [warning, setWarning] = React.useState("");
   const [filters, setFilters] = React.useState(filtersList);
   const [rows, setRows] = React.useState(data);
   const ref = React.useRef(null);
@@ -55,11 +63,38 @@ export default function Body({ data, list, selected, setSelected }) {
   React.useMemo(() => {
     if (!rows) return "";
     let pl = data;
+    let showAll = !showCollections;
 
     pl = runFilters(pl, filters);
 
+    // list.forEach((i) => {
+    //   if (i.visibility == 1) {
+    //     // console.log(i.visibility, " asdfasdfsd");
+    //     showAll = false;
+    //     return;
+    //   }
+    // });
+
+    pl = pl.map((item) => {
+      item.show = showAll;
+      list.forEach((i) => {
+        var pok = i;
+        if (pok.pokemon.includes(item.id)) {
+          if (pok.visibility) {
+            item.show = showCollections;
+          }
+        }
+      });
+      return item;
+    });
+
+    pl = pl.filter((p) => p.show == true);
+
+    // console.log(pl, selected);
+
     setRows(pl);
-  }, [filters]);
+    setWarning("");
+  }, [filters, list, selected.pokemon, showCollections]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -97,6 +132,9 @@ export default function Body({ data, list, selected, setSelected }) {
       }
       sl.pokemon = newPokelist;
       setSelected(newPokelist);
+      setWarning("");
+    } else {
+      setWarning("Please select a collection to add pokemon");
     }
   };
 
@@ -122,9 +160,12 @@ export default function Body({ data, list, selected, setSelected }) {
         rowCount={rows.length}
         handleSelectAllClick={handleSelectAllClick}
         handleRequestSort={handleRequestSort}
+        warning={warning}
         orderBy={orderBy}
         order={order}
         toggleFilters={() => setShowFilters(!showfilters)}
+        toggleCollections={toggleCollections}
+        showCollections={showCollections}
       />
       {showfilters && <TagFilters filtersList={filters} setFilters={setFilters} />}
 

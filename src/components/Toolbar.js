@@ -15,6 +15,10 @@ import Tooltip from "@mui/material/Tooltip";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { styled } from "@mui/material/styles";
+import Alert from "@mui/material/Alert";
+import { Button } from "@mui/material";
+import IconCross from "@mui/icons-material/CancelOutlined";
+import IconCheck from "@mui/icons-material/CheckCircleOutlined";
 
 const Table = styled(TableC)`
   width: initial;
@@ -49,8 +53,7 @@ const headCells = [
   },
 ];
 
-function EnhancedTableHead(props) {
-  const { order, orderBy, onRequestSort } = props;
+function EnhancedTableHead({ order, orderBy, onRequestSort }) {
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
   };
@@ -81,7 +84,7 @@ function EnhancedTableHead(props) {
 }
 
 EnhancedTableHead.propTypes = {
-  numSelected: PropTypes.number.isRequired,
+  // numSelected: PropTypes.number.isRequired,
   onRequestSort: PropTypes.func.isRequired,
   onSelectAllClick: PropTypes.func.isRequired,
   order: PropTypes.oneOf(["asc", "desc"]).isRequired,
@@ -95,6 +98,8 @@ export default function ToolbarPoke(props) {
     rowCount,
     handleSelectAllClick,
     handleRequestSort,
+    toggleCollections,
+    warning,
     order,
     orderBy,
     toggleFilters,
@@ -114,7 +119,7 @@ export default function ToolbarPoke(props) {
       }}
     >
       <Box sx={{ mr: "auto", display: "flex", alignItems: "center" }}>
-        <Checkbox
+        {/* <Checkbox
           color="primary"
           indeterminate={numSelected > 0 && numSelected < rowCount}
           checked={rowCount > 0 && numSelected === rowCount}
@@ -122,8 +127,10 @@ export default function ToolbarPoke(props) {
           inputProps={{
             "aria-label": "select all desserts",
           }}
-        />
-        {numSelected > 0 ? (
+        /> */}
+        {warning ? (
+          <Alert severity="warning"> {warning}</Alert>
+        ) : numSelected > 0 ? (
           <Typography color="inherit" variant="subtitle1" component="div">
             {numSelected} selected
           </Typography>
@@ -181,6 +188,6 @@ export default function ToolbarPoke(props) {
   );
 }
 
-ToolbarPoke.propTypes = {
-  numSelected: PropTypes.number.isRequired,
-};
+// ToolbarPoke.propTypes = {
+//   numSelected: PropTypes.number.isRequired,
+// };

@@ -12,6 +12,9 @@ import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Body from "./components/Body";
 import Tooltip from "@mui/material/Tooltip";
+import { Button } from "@mui/material";
+import IconCross from "@mui/icons-material/CancelOutlined";
+import IconCheck from "@mui/icons-material/CheckCircleOutlined";
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
@@ -58,18 +61,22 @@ export default function PersistentDrawerLeft() {
   const [list, setList] = React.useState(JSON.parse(localStorage.getItem("collection")) || listD);
   const [update, setUpdate] = React.useState(true);
   const [selected, setSelected] = React.useState([]);
+  const [showCollections, setCollections] = React.useState(false);
   const data = JSON.parse(localStorage.getItem("pokelist"));
 
   const handleDrawerClose = () => {
-    const newList = list.map((item) => {
-      item["selected"] = false;
-      return item;
-    });
-    setList(newList);
+    // const newList = list.map((item) => {
+    //   item["selected"] = false;
+    //   return item;
+    // });
+    // setList(newList);
     setOpen(false);
   };
   const handleDrawerOpen = () => {
     setOpen(true);
+  };
+  const handleCollections = () => {
+    setCollections(!showCollections);
   };
   const updateSelected = (l) => {
     let obj = list.find((o) => o.selected === true);
@@ -113,17 +120,43 @@ export default function PersistentDrawerLeft() {
             {theme.direction === "ltr" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
           </IconButton>
           <Tooltip title="Edit Collections" placement="left">
-            <IconButton sx={{ ml: "auto" }} onClick={() => setEdit(!edit)}>
+            <IconButton sx={{}} onClick={() => setEdit(!edit)}>
               <EditIcon color={edit ? "primary" : "default"} />
             </IconButton>
           </Tooltip>
+          <Box
+            sx={{
+              ml: "auto",
+              mr: "7px",
+              order: { xs: 1, sm: "initial" },
+              width: { xs: "100%", sm: "initial" },
+            }}
+          >
+            <Tooltip
+              title={showCollections ? "Hide selected collections" : "Show selected collections"}
+              placement="right"
+            >
+              <Button onClick={handleCollections}>
+                {showCollections ? "Hide" : "Show"}
+                &nbsp;
+                {showCollections ? <IconCross color="error" /> : <IconCheck color="secondary" />}
+              </Button>
+            </Tooltip>
+          </Box>
         </DrawerHeader>
         <Divider />
-        <Sidebar edit={edit} setList={setList} list={list} />
+        <Sidebar edit={edit} setList={setList} list={list} showCollections={showCollections} />
       </Drawer>
       <Main open={open} width={drawerWidth}>
         <DrawerHeader />
-        <Body data={data} list={list} selected={selected} setSelected={updateSelected} />
+        <Body
+          data={data}
+          list={list}
+          selected={selected}
+          setSelected={updateSelected}
+          showCollections={showCollections}
+          toggleCollections={handleCollections}
+        />
       </Main>
     </Box>
   );

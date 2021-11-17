@@ -11,6 +11,8 @@ import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Tooltip from "@mui/material/Tooltip";
 import DragHandleIcon from "@mui/icons-material/DragHandle";
+import { Container, Draggable } from "react-smooth-dnd";
+import { arrayMoveImmutable } from "array-move";
 
 // import CheckIcon from "@mui/icons-material/Check";
 // import ClearIcon from "@mui/icons-material/Clear";
@@ -27,7 +29,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import ArrowRightIcon from "@mui/icons-material/ArrowForwardIos";
 import RemoveIcon from "@mui/icons-material/Remove";
 
-export default function Sidebar({ edit, list, setList }) {
+export default function Sidebar({ edit, list, setList, showCollections }) {
   const [name, setName] = useState("");
 
   const textInput = useRef(null);
@@ -42,7 +44,7 @@ export default function Sidebar({ edit, list, setList }) {
   };
   const handleAdd = () => {
     if (name !== "") {
-      const newList = list.concat({ name: name, visibility: 0, selected: false, pokemon: [] });
+      const newList = list.concat({ name: name, visibility: false, selected: false, pokemon: [] });
       setList(newList);
       setName("");
       if (textInput.current) textInput.current.focus();
@@ -70,9 +72,13 @@ export default function Sidebar({ edit, list, setList }) {
   };
   const handleVisibility = (index) => {
     const newList = [...list];
-    const vis = (newList[index]["visibility"] + 1) % 3;
-    newList[index]["visibility"] = vis;
+    // const vis = (newList[index]["visibility"] + 1) % 2;
+    newList[index]["visibility"] = !newList[index]["visibility"];
     setList(newList);
+  };
+
+  const onDrop = ({ removedIndex, addedIndex }) => {
+    setList((list) => arrayMoveImmutable(list, removedIndex, addedIndex));
   };
 
   const btn = [
@@ -84,64 +90,87 @@ export default function Sidebar({ edit, list, setList }) {
   return (
     <>
       <List>
-        {list.map((item, index) => (
-          <ListItem
-            button
-            key={index}
-            selected={item.selected}
-            onClick={() => handleSelect(index)}
-            secondaryAction={
-              edit ? (
-                <Tooltip title="Remove" placement="left">
-                  <IconButton
-                    aria-label="delete"
-                    size="small"
-                    onClick={(e) => {
-                      handleRemove(index);
-                      e.stopPropagation();
-                    }}
-                  >
-                    <IconRemove color="error" />
-                    {/* <DeleteIcon /> */}
-                  </IconButton>
-                </Tooltip>
-              ) : (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    handleVisibility(index);
-                    e.stopPropagation();
-                  }}
-                >
-                  <Tooltip title={btn[item.visibility].title} placement="left">
-                    {btn[item.visibility].item}
-                  </Tooltip>
-                </IconButton>
-              )
-            }
-          >
-            {edit ? (
-              <DragHandleIcon className="drag" />
-            ) : (
-              <>
-                {item.selected ? <IconFull color="primary" /> : <IconEmpty sx={{ opacity: 0.5 }} />}
-              </>
-            )}
-            {edit ? (
-              <TextField
-                hiddenLabel
-                placeholder="Add Collection"
-                variant="standard"
-                value={item.name}
-                fullWidth
-                sx={{ mr: 1, ml: 1 }}
-                onChange={(e) => handleRename(e, index)}
-              />
-            ) : (
-              <ListItemText primary={item.name} sx={{ ml: 1 }} />
-            )}
-          </ListItem>
-        ))}
+        <Container onDrop={onDrop}>
+          {list.map((item, index) => (
+            <Draggable key={index}>
+              <ListItem
+                button
+                key={index}
+                selected={item.selected}
+                onClick={() => handleSelect(index)}
+                secondaryAction={
+                  edit ? (
+                    <Tooltip title="Remove" placement="left">
+                      <IconButton
+                        aria-label="delete"
+                        size="small"
+                        onClick={(e) => {
+                          handleRemove(index);
+                          e.stopPropagation();
+                        }}
+                      >
+                        <IconRemove color="error" />
+                        {/* <DeleteIcon /> */}
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip
+                      title={
+                        !item.visibility
+                          ? showCollections
+                            ? "Collection Hidden"
+                            : "Collection Visible"
+                          : showCollections
+                          ? "Collection Visible"
+                          : "Collection Hidden"
+                      }
+                      placement="left"
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          handleVisibility(index);
+                          e.stopPropagation();
+                        }}
+                      >
+                        {item.visibility
+                          ? showCollections
+                            ? btn[1].item
+                            : btn[2].item
+                          : btn[0].item}
+                      </IconButton>
+                    </Tooltip>
+                  )
+                }
+              >
+                {edit ? (
+                  <DragHandleIcon className="drag" />
+                ) : (
+                  <>
+                    {item.selected ? (
+                      <IconFull color="primary" />
+                    ) : (
+                      <IconEmpty sx={{ opacity: 0.5 }} />
+                    )}
+                  </>
+                )}
+                {edit ? (
+                  <TextField
+                    hiddenLabel
+                    placeholder="Add Collection"
+                    variant="standard"
+                    value={item.name}
+                    fullWidth
+                    sx={{ mr: 1, ml: 1 }}
+                    onChange={(e) => handleRename(e, index)}
+                  />
+                ) : (
+                  <ListItemText primary={item.name} sx={{ ml: 1 }} />
+                )}
+              </ListItem>
+            </Draggable>
+          ))}
+        </Container>
         <ListItem>
           <TextField
             hiddenLabel
@@ -167,12 +196,12 @@ export default function Sidebar({ edit, list, setList }) {
       </List>
       <Divider />
       <List>
-        {["All mail", "Trash", "Spam"].map((text, index) => (
+        {/* {["All mail", "Trash", "Spam"].map((text, index) => (
           <ListItem button key={text}>
             <ListItemIcon>{index % 2 === 0 ? <InboxIcon /> : <MailIcon />}</ListItemIcon>
             <ListItemText primary={text} />
           </ListItem>
-        ))}
+        ))} */}
       </List>
     </>
   );
