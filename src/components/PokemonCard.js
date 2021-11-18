@@ -1,6 +1,5 @@
 import * as React from "react";
-import { styled, useTheme, alpha } from "@mui/material/styles";
-import { Box, ThemeProvider, createTheme } from "@mui/system";
+import { styled } from "@mui/material/styles";
 import Check from "@mui/icons-material/CheckBox";
 // import styled from "styled-components";
 
@@ -35,7 +34,6 @@ const PokemonGeneration = styled("div")({
   right: 0,
   fontWeight: "bold",
   fontSize: "12px",
-  // background: "#ddd",
   padding: "1px 3px",
   cursor: "pointer",
 });

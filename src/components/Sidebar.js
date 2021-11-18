@@ -1,33 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
-import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import InboxIcon from "@mui/icons-material/MoveToInbox";
-import MailIcon from "@mui/icons-material/Mail";
 import Divider from "@mui/material/Divider";
 import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
-import DeleteIcon from "@mui/icons-material/Delete";
 import Tooltip from "@mui/material/Tooltip";
 import DragHandleIcon from "@mui/icons-material/DragHandle";
 import { Container, Draggable } from "react-smooth-dnd";
 import { arrayMoveImmutable } from "array-move";
+import DataImportExport from "./DataImportExport";
 
-// import CheckIcon from "@mui/icons-material/Check";
-// import ClearIcon from "@mui/icons-material/Clear";
-// import RemoveIcon from "@mui/icons-material/Remove";
 import IconPlus from "@mui/icons-material/ControlPoint";
 import IconCross from "@mui/icons-material/CancelOutlined";
 import IconCheck from "@mui/icons-material/CheckCircleOutlined";
 import IconEmpty from "@mui/icons-material/RadioButtonUncheckedOutlined";
 import IconFull from "@mui/icons-material/RadioButtonChecked";
 import IconRemove from "@mui/icons-material/RemoveCircleOutline";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import IconBox from "@mui/icons-material/CheckBoxOutlineBlank";
-import CheckIcon from "@mui/icons-material/Check";
-import ArrowRightIcon from "@mui/icons-material/ArrowForwardIos";
-import RemoveIcon from "@mui/icons-material/Remove";
 
 export default function Sidebar({ edit, list, setList, showCollections }) {
   const [text, setText] = useState("");
@@ -195,6 +184,7 @@ export default function Sidebar({ edit, list, setList, showCollections }) {
         </ListItem>
       </List>
       <Divider />
+      <DataImportExport />
       <List>
         {/* {["All mail", "Trash", "Spam"].map((text, index) => (
           <ListItem button key={text}>

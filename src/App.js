@@ -12,6 +12,7 @@ import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Body from "./components/Body";
 import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import { Button } from "@mui/material";
 import IconCross from "@mui/icons-material/CancelOutlined";
 import IconCheck from "@mui/icons-material/CheckCircleOutlined";
@@ -46,10 +47,10 @@ const DrawerHeader = styled("div")(({ theme }) => ({
 
 const listD = [
   {
-    name: "Collection",
-    selected: false,
-    visibility: 1,
-    pokemon: [],
+    text: "Test Collection",
+    selected: true,
+    visibility: 0,
+    pokemon: [289, 248, 468, 473, 149, 409, 464, 609, 612],
   },
 ];
 
@@ -149,10 +150,13 @@ export default function PersistentDrawerLeft() {
               <EditIcon color={edit ? "primary" : "default"} />
             </IconButton>
           </Tooltip>
+          <Typography variant="p" id="tableTitle" sx={{ m: "0 auto 0 20px" }}>
+            Collections
+          </Typography>
           <Box
             sx={{
-              ml: "auto",
-              mr: "7px",
+              // ml: "auto",
+              mr: "6px",
               order: { xs: 1, sm: "initial" },
               width: { xs: "100%", sm: "initial" },
             }}

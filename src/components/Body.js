@@ -149,7 +149,7 @@ export default function Body({
   let title = "Pokedex";
   if (list) {
     let obj = list.find((o) => o.selected === true);
-    if (obj) title = obj.name;
+    if (obj) title = obj.text;
   }
 
   return (
@@ -180,7 +180,6 @@ export default function Body({
                 pokemon={row}
                 key={row.name}
                 select={(event) => handleClick(event, row.id)}
-                key={row.name}
                 selected={isItemSelected}
               />
             );
