@@ -19,17 +19,23 @@ const filtersList = {
   g6: true,
   g7: true,
   g8: true,
+  g9: true,
 };
 
 const runFilters = (pl, filters) => {
   // console.log(pl, filters);
   if (filters) {
-    if (!filters["normal"]) pl = pl.filter((p) => p.tags.length);
-    if (!filters["mega"]) pl = pl.filter((p) => !p.tags.includes("mega"));
-    if (!filters["gmax"]) pl = pl.filter((p) => !p.tags.includes("gmax"));
-    if (!filters["legendary"]) pl = pl.filter((p) => !p.tags.includes("legendary"));
-    if (!filters["mythical"]) pl = pl.filter((p) => !p.tags.includes("mythical"));
-    if (!filters["baby"]) pl = pl.filter((p) => !p.tags.includes("baby"));
+    if (!filters["normal"]) pl = pl.filter((p) => p.tags && p.tags.length);
+    if (!filters["mega"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("mega"));
+    if (!filters["gmax"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("gmax"));
+    if (!filters["legendary"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("legendary"));
+    if (!filters["mythical"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("mythical"));
+    if (!filters["baby"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("baby"));
     if (!filters["unreleased"]) pl = pl.filter((p) => p.released);
     if (!filters["released"]) pl = pl.filter((p) => !p.released);
     if (!filters["g1"]) pl = pl.filter((p) => p.gen !== 1);
@@ -40,6 +46,7 @@ const runFilters = (pl, filters) => {
     if (!filters["g6"]) pl = pl.filter((p) => p.gen !== 6);
     if (!filters["g7"]) pl = pl.filter((p) => p.gen !== 7);
     if (!filters["g8"]) pl = pl.filter((p) => p.gen !== 8);
+    if (!filters["g9"]) pl = pl.filter((p) => p.gen !== 9);
   }
   return pl;
 };
@@ -59,7 +66,14 @@ const TagFilters = ({ filtersList, setFilters }) => {
 
   return (
     // <Stack direction="row" spacing={1}>
-    <Box sx={{ display: "flex", justifyContent: "center", flexWrap: "wrap", pb: "2px" }}>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        flexWrap: "wrap",
+        pb: "2px",
+      }}
+    >
       {filters &&
         Object.keys(filters).map((f) => (
           <Chip

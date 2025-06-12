@@ -16,6 +16,7 @@ import Typography from "@mui/material/Typography";
 import { Button } from "@mui/material";
 import IconCross from "@mui/icons-material/CancelOutlined";
 import IconCheck from "@mui/icons-material/CheckCircleOutlined";
+import GetDataGrahp from "./data/GetDataGrahp";
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
@@ -59,7 +60,9 @@ export default function PersistentDrawerLeft() {
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
   const [edit, setEdit] = React.useState(false);
-  const [list, setList] = React.useState(JSON.parse(localStorage.getItem("collection")) || listD);
+  const [list, setList] = React.useState(
+    JSON.parse(localStorage.getItem("collection")) || listD
+  );
   const [update, setUpdate] = React.useState(true);
   const [selected, setSelected] = React.useState([]);
   const [showCollections, setCollections] = React.useState(false);
@@ -67,33 +70,43 @@ export default function PersistentDrawerLeft() {
     JSON.parse(localStorage.getItem("pokelist")) || ""
   );
 
-  React.useEffect(async () => {
-    if (!pokemonData) {
-      var pokelist;
-      fetch("./data/pokelist.json")
-        .then((response) => response.json())
-        .then((data) => {
-          pokelist = data.pokelist;
+  React.useEffect(() => {
+    async function fetchPokemonData() {
+      if (!pokemonData) {
+        try {
+          // First try to fetch from pokelist.json
+          const pokemonResponse = await fetch("./data/pokelist.json");
+          const pokemonJson = await pokemonResponse.json();
+          const pokelist = pokemonJson.pokelist;
 
-          fetch("./data/released.json")
-            .then((response) => response.json())
-            .then((data) => {
-              const result = pokelist.map((item) => {
-                // if (data.released.includes(item.id)) item.released = true;
-                item.released = data.released.includes(item.id);
-                return item;
-              });
-              setPokemonData(result);
-              // localStorage.setItem("pokelist", JSON.stringify(result));
-            });
-        });
+          const releasedResponse = await fetch("./data/released.json");
+          const releasedData = await releasedResponse.json();
+
+          const result = pokelist.map((item) => {
+            if (releasedData.released.includes(item.id)) {
+              item.released = true;
+            }
+            return item;
+          });
+          setPokemonData(result);
+        } catch (error) {
+          console.error("Error fetching Pokemon data:", error);
+
+          // If pokelist.json fails, try GraphQL
+          try {
+            const newPokeList = await GetDataGrahp();
+            console.log("newPokeList", newPokeList);
+            setPokemonData(newPokeList);
+            localStorage.setItem("pokelist", JSON.stringify(newPokeList));
+          } catch (graphError) {
+            console.error("Error fetching from GraphQL:", graphError);
+          }
+        }
+      }
     }
-    // if (!pokemonData) {
-    //   let newPokeList = await GetDataGrahp();
-    //   setPokemonData(newPokeList);
-    //   localStorage.setItem("pokelist", JSON.stringify(newPokeList));
-    // }
-  }, []);
+
+    fetchPokemonData();
+  }, [pokemonData]); // Added pokemonData as dependency since we check its value
 
   const handleDrawerClose = () => {
     setOpen(false);
@@ -127,7 +140,11 @@ export default function PersistentDrawerLeft() {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <Header width={drawerWidth} open={open} handleDrawerOpen={handleDrawerOpen} />
+      <Header
+        width={drawerWidth}
+        open={open}
+        handleDrawerOpen={handleDrawerOpen}
+      />
       <Drawer
         sx={{
           width: drawerWidth,
@@ -143,7 +160,11 @@ export default function PersistentDrawerLeft() {
       >
         <DrawerHeader>
           <IconButton onClick={handleDrawerClose}>
-            {theme.direction === "ltr" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            {theme.direction === "ltr" ? (
+              <ChevronLeftIcon />
+            ) : (
+              <ChevronRightIcon />
+            )}
           </IconButton>
           <Tooltip title="Edit Collections" placement="left">
             <IconButton sx={{}} onClick={() => setEdit(!edit)}>
@@ -162,19 +183,32 @@ export default function PersistentDrawerLeft() {
             }}
           >
             <Tooltip
-              title={showCollections ? "Hide selected collections" : "Show selected collections"}
+              title={
+                showCollections
+                  ? "Hide selected collections"
+                  : "Show selected collections"
+              }
               placement="right"
             >
               <Button onClick={handleCollections}>
                 {showCollections ? "Hide" : "Show"}
                 &nbsp;
-                {showCollections ? <IconCross color="error" /> : <IconCheck color="secondary" />}
+                {showCollections ? (
+                  <IconCross color="error" />
+                ) : (
+                  <IconCheck color="secondary" />
+                )}
               </Button>
             </Tooltip>
           </Box>
         </DrawerHeader>
         <Divider />
-        <Sidebar edit={edit} setList={setList} list={list} showCollections={showCollections} />
+        <Sidebar
+          edit={edit}
+          setList={setList}
+          list={list}
+          showCollections={showCollections}
+        />
       </Drawer>
       <Main open={open} width={drawerWidth}>
         <DrawerHeader />

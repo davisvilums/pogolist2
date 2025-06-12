@@ -34,6 +34,9 @@ const getPokemonQuery = gql`
         id
         is_default
         is_mega
+        pokemon_v2_pokemonformsprites {
+          sprites
+        }
       }
       pokemon_v2_pokemonstats {
         base_stat
@@ -41,6 +44,38 @@ const getPokemonQuery = gql`
     }
   }
 `;
+
+function determineSprite(pokemon) {
+  let spriteUrl;
+
+  // Specific sprite overrides based on unique IDs or conditions
+  const specialSprites = {
+    // 10178:
+    //   "https://archives.bulbagarden.net/media/upload/thumb/3/39/HOME555GZ.png/220px-HOME555GZ.png",
+    // 10182:
+    //   "https://archives.bulbagarden.net/media/upload/3/32/902Basculegion.png",
+    // 10183:
+    //   "https://archives.bulbagarden.net/media/upload/thumb/0/01/HOME845Go.png/220px-HOME845Go.png",
+    // Add other special cases here
+  };
+
+  // Check if there's a special sprite for this Pokemon ID
+  if (specialSprites[pokemon.id]) {
+    return specialSprites[pokemon.id];
+  }
+
+  // Use different artwork based on certain conditions or ID ranges
+  if (pokemon.id > 891 && pokemon.id < 1000) {
+    spriteUrl = `https://assets.pokemon.com/assets/cms2/img/pokedex/detail/${pokemon.id}.png`;
+  } else if (pokemon.name.includes("-gmax")) {
+    spriteUrl = `https://img.pokemondb.net/artwork/avif/${pokemon.name}.avif`;
+  } else {
+    // Default to official artwork for most cases
+    spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
+  }
+
+  return spriteUrl;
+}
 
 async function GetDataGrahp() {
   var pokeList = new Array();
@@ -53,24 +88,28 @@ async function GetDataGrahp() {
     })
     .then((result) => {
       var pokemons = result.data.pokemon_v2_pokemon;
+      // console.log("TEST 1", pokemons);
       for (const pokemon of pokemons) {
-        var pok = new Object();
-        pok.cp = GetPokemonCP(pokemon.pokemon_v2_pokemonstats);
-        pok.name = pokemon.name;
-        pok.order = pokemon.order;
-        pok.id = pokemon.id;
-        pok.kind = "normal";
-        pok.gen = pokemon.pokemon_v2_pokemonspecy.generation_id;
-        pok.tags = [];
+        var pok = {
+          cp: GetPokemonCP(pokemon.pokemon_v2_pokemonstats),
+          name: pokemon.name,
+          order: pokemon.order,
+          id: pokemon.id,
+          kind: "normal",
+          gen: pokemon.pokemon_v2_pokemonspecy.generation_id,
+          tags: [],
+          visible: true,
+          // released: releasedList.includes(pokemon.id),
+          released: true,
+          sprite: determineSprite(pokemon), // Assume determineSprite is a function you define to clean up sprite determination
+        };
 
-        pok.visible = true;
-        pok.released = false;
-
-        if (releasedList.includes(pok.id)) pok.released = true;
         if (pokemon.pokemon_v2_pokemonspecy.is_baby) pok.tags.push("baby");
-        if (pokemon.pokemon_v2_pokemonspecy.is_legendary) pok.tags.push("legendary");
-        if (pokemon.pokemon_v2_pokemonspecy.is_mythical) pok.tags.push("mythical");
-        if (pokemon.pokemon_v2_pokemonforms[0].is_mega) pok.tags.push("mega");
+        if (pokemon.pokemon_v2_pokemonspecy.is_legendary)
+          pok.tags.push("legendary");
+        if (pokemon.pokemon_v2_pokemonspecy.is_mythical)
+          pok.tags.push("mythical");
+        // if (pokemon.pokemon_v2_pokemonforms[0].is_mega) pok.tags.push("mega");
         if (pokemon.name.includes("-gmax")) pok.tags.push("gmax");
 
         if (pokemon.order < 0) {
@@ -83,39 +122,23 @@ async function GetDataGrahp() {
           }
         }
         if (pok.order < 0) {
-          pok.order = pok.id + 200;
+          pok.order = pok.id + 20000;
         }
 
-        pok.sprite =
-          "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/" +
-          pok.id +
-          ".png";
-
-        var rawList = [
-          10093, 10080, 10081, 10082, 10083, 10084, 10085, 10094, 10095, 10096, 10097, 10098, 10099,
-          10148, 10149, 10065, 10057, 10085, 10017, 10175, 10116, 10117, 10406, 10130,
+        var includeForms = [
+          412, 413, 421, 422, 423, 585, 586, 666, 669, 670, 671, 676,
         ];
-        if (rawList.includes(pok.id))
-          pok.sprite =
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" +
-            pok.id +
-            ".png";
-
-        if (pok.name.includes("castform-")) {
-          var evArr = pok.name.split("castform");
-          var newname = 351 + evArr[1] + ".svg";
-          pok.sprite =
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/" +
-            newname;
-        }
-
-        var includeForms = [412, 413, 421, 422, 423, 585, 586];
-        if (pokemon.pokemon_v2_pokemonforms[1] && includeForms.includes(pok.id)) {
+        // var includeForms = [];
+        if (
+          pokemon.pokemon_v2_pokemonforms[1] &&
+          includeForms.includes(pok.id)
+        ) {
           var forms = pokemon.pokemon_v2_pokemonforms;
-
+          // console.log("form 1", forms);
           forms.map((form, index) => {
             var pokf = Object.assign({}, pok);
-            pokf.id = form.id;
+            // console.log("pokf", pokf);
+            pokf.id = form.id + 10000;
             pokf.name = form.name;
             var newname = form.name.split("-");
             if (newname.length > 0 && index > 0) {
@@ -126,23 +149,43 @@ async function GetDataGrahp() {
                 ".svg";
 
               var rawList2 = [664, 665, 666, 676, 670, 671, 773, 774, 10136];
+              // var rawList2 = [];
               if (rawList2.includes(pok.id)) {
                 pokf.sprite =
                   "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" +
                   pokf.imgname +
                   ".png";
               }
+
+              var sprites = form.pokemon_v2_pokemonformsprites[0].sprites;
+              // console.log("sprites", sprites);
+              if (sprites) {
+                // var spar = JSON.parse(sprites);
+                pokf.sprite = sprites.front_default;
+                // console.log("sprite", spar.front_default);
+              }
+              // console.log("form 2", form);
+              if (10086 == form.id) {
+                pokf.sprite =
+                  "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/666-icy-snow.png";
+              }
             }
-            if (!ExcludeList.includes(pokf.id)) pokeList.push(pokf);
+            /*
+             */
+            // if (!ExcludeList.includes(pokf.id))
+            pokeList.push(pokf);
           });
         } else {
-          if (!ExcludeList.includes(pok.id)) pokeList.push(pok);
+          // if (!ExcludeList.includes(pok.id))
+          pokeList.push(pok);
         }
+
+        // pokeList.push(pok);
       }
       // setpokemonList(pokeList);
     });
   // }, []);
-  // console.log(pokeList, 'tam ta ram');
+  // console.log(pokeList, "tam ta ram");
   return pokeList;
 }
 

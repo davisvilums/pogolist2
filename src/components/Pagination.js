@@ -5,7 +5,7 @@ import TablePagination from "@mui/material/TablePagination";
 export default function Pagination({ length, setItemsPerPage, updatePage }) {
   const [page, setPage] = React.useState(0);
   const [totalRows, setTotalRows] = React.useState(50);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [rowsPerPage, setRowsPerPage] = React.useState(100);
   const [itemsPerCol, setItemsPerCol] = React.useState(10);
   const ref = React.useRef(null);
 
@@ -13,7 +13,12 @@ export default function Pagination({ length, setItemsPerPage, updatePage }) {
   React.useEffect(() => {
     window.addEventListener("resize", handleResize);
     setTimeout(handleResize, 200);
-  });
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []); // Added dependency array
 
   const handleChangeRowsPerPage = (event) => {
     var items = parseInt(event.target.value, 10);
@@ -30,7 +35,8 @@ export default function Pagination({ length, setItemsPerPage, updatePage }) {
 
   const handleResize = () => {
     var ic = 10;
-    if (ref.current && ref.current.offsetWidth) ic = Math.floor(ref.current.offsetWidth / 99);
+    if (ref.current && ref.current.offsetWidth)
+      ic = Math.floor(ref.current.offsetWidth / 99);
     if (ic !== itemsPerCol) {
       var tr = Math.ceil(length / ic);
       setItemsPerCol(ic);
@@ -42,7 +48,7 @@ export default function Pagination({ length, setItemsPerPage, updatePage }) {
   return (
     <Box ref={ref}>
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 25, 50, 100, 250, 500, 1000]}
         component="div"
         count={totalRows}
         rowsPerPage={rowsPerPage}
@@ -51,7 +57,9 @@ export default function Pagination({ length, setItemsPerPage, updatePage }) {
         onRowsPerPageChange={handleChangeRowsPerPage}
         labelDisplayedRows={({ from, to, count }) => {
           var to_p = to * itemsPerCol > length ? length : to * itemsPerCol;
-          return `${from * itemsPerCol - (itemsPerCol - 1)}-${to_p} of ${length}`;
+          return `${
+            from * itemsPerCol - (itemsPerCol - 1)
+          }-${to_p} of ${length}`;
         }}
       />
     </Box>

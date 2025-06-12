@@ -1,5 +1,4 @@
 import { alpha } from "@mui/material/styles";
-import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import TableC from "@mui/material/Table";
 import TableCellC from "@mui/material/TableCell";
@@ -79,22 +78,12 @@ function EnhancedTableHead({ order, orderBy, onRequestSort }) {
   );
 }
 
-EnhancedTableHead.propTypes = {
-  // numSelected: PropTypes.number.isRequired,
-  onRequestSort: PropTypes.func.isRequired,
-  onSelectAllClick: PropTypes.func.isRequired,
-  order: PropTypes.oneOf(["asc", "desc"]).isRequired,
-  orderBy: PropTypes.string.isRequired,
-  rowCount: PropTypes.number.isRequired,
-};
-
 export default function ToolbarPoke(props) {
   const {
     numSelected,
     rowCount,
     handleSelectAllClick,
     handleRequestSort,
-    toggleCollections,
     warning,
     order,
     orderBy,
@@ -183,7 +172,3 @@ export default function ToolbarPoke(props) {
     </Toolbar>
   );
 }
-
-// ToolbarPoke.propTypes = {
-//   numSelected: PropTypes.number.isRequired,
-// };

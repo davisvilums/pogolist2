@@ -79,7 +79,7 @@ export default function Body({
       item.show = showAll;
       list.forEach((i) => {
         var pok = i;
-        if (pok.pokemon.includes(item.id)) {
+        if (pok.pokemon && pok.pokemon.includes(item.id)) {
           if (pok.visibility) {
             item.show = showCollections;
           }
@@ -167,7 +167,9 @@ export default function Body({
         toggleCollections={toggleCollections}
         showCollections={showCollections}
       />
-      {showfilters && <TagFilters filtersList={filters} setFilters={setFilters} />}
+      {showfilters && (
+        <TagFilters filtersList={filters} setFilters={setFilters} />
+      )}
 
       <PokemonWrap ref={ref}>
         {stableSort(rows, getComparator(order, orderBy))
@@ -185,7 +187,11 @@ export default function Body({
             );
           })}
       </PokemonWrap>
-      <Pagination length={rows.length} setItemsPerPage={setItemsPerPage} updatePage={setPage} />
+      <Pagination
+        length={rows.length}
+        setItemsPerPage={setItemsPerPage}
+        updatePage={setPage}
+      />
     </Paper>
   );
 }
