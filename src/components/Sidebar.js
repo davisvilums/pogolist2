@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
@@ -7,8 +7,22 @@ import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import DragHandleIcon from "@mui/icons-material/DragHandle";
-import { Container, Draggable } from "react-smooth-dnd";
-import { arrayMoveImmutable } from "array-move";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import DataImportExport from "./DataImportExport";
 
 import IconPlus from "@mui/icons-material/ControlPoint";
@@ -17,7 +31,115 @@ import IconCheck from "@mui/icons-material/CheckCircleOutlined";
 import IconEmpty from "@mui/icons-material/RadioButtonUncheckedOutlined";
 import IconFull from "@mui/icons-material/RadioButtonChecked";
 import IconRemove from "@mui/icons-material/RemoveCircleOutline";
-import VisibilityIcon from "@mui/icons-material/Visibility";
+
+const btn = [
+  { title: "Ignore", item: <IconEmpty /> },
+  { title: "Show", item: <IconCheck color="secondary" /> },
+  { title: "Hide", item: <IconCross color="error" /> },
+];
+
+function SortableItem({
+  id,
+  item,
+  index,
+  edit,
+  showCollections,
+  handleSelect,
+  handleRemove,
+  handleVisibility,
+  handleRename,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <ListItem
+      ref={setNodeRef}
+      style={style}
+      button
+      selected={item.selected}
+      onClick={() => handleSelect(index)}
+      secondaryAction={
+        edit ? (
+          <Tooltip title="Remove" placement="left">
+            <IconButton
+              aria-label="delete"
+              size="small"
+              onClick={(e) => {
+                handleRemove(index);
+                e.stopPropagation();
+              }}
+            >
+              <IconRemove color="error" />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Tooltip
+            title={
+              !item.visibility
+                ? showCollections
+                  ? "Collection Hidden"
+                  : "Collection Visible"
+                : showCollections
+                ? "Collection Visible"
+                : "Collection Hidden"
+            }
+            placement="left"
+          >
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                handleVisibility(index);
+                e.stopPropagation();
+              }}
+            >
+              {item.visibility
+                ? showCollections
+                  ? btn[1].item
+                  : btn[2].item
+                : btn[0].item}
+            </IconButton>
+          </Tooltip>
+        )
+      }
+    >
+      {edit ? (
+        <DragHandleIcon className="drag" {...attributes} {...listeners} />
+      ) : (
+        <>
+          {item.selected ? (
+            <IconFull color="primary" />
+          ) : (
+            <IconEmpty sx={{ opacity: 0.5 }} />
+          )}
+        </>
+      )}
+      {edit ? (
+        <TextField
+          hiddenLabel
+          placeholder="Add Collection"
+          variant="standard"
+          value={item.text}
+          fullWidth
+          sx={{ mr: 1, ml: 1 }}
+          onChange={(e) => handleRename(e, index)}
+        />
+      ) : (
+        <ListItemText primary={item.text} sx={{ ml: 1 }} />
+      )}
+    </ListItem>
+  );
+}
 
 export default function Sidebar({
   edit,
@@ -79,100 +201,50 @@ export default function Sidebar({
     setList(newList);
   };
 
-  const onDrop = ({ removedIndex, addedIndex }) => {
-    setList((list) => arrayMoveImmutable(list, removedIndex, addedIndex));
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-  const btn = [
-    { title: "Ignore", item: <IconEmpty /> },
-    { title: "Show", item: <IconCheck color="secondary" /> },
-    { title: "Hide", item: <IconCross color="error" /> },
-  ];
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      const oldIndex = list.findIndex((_, i) => `item-${i}` === active.id);
+      const newIndex = list.findIndex((_, i) => `item-${i}` === over.id);
+      setList(arrayMove(list, oldIndex, newIndex));
+    }
+  };
 
   return (
     <>
       <List>
-        <Container onDrop={onDrop}>
-          {list.map((item, index) => (
-            <Draggable key={index}>
-              <ListItem
-                button
-                key={index}
-                selected={item.selected}
-                onClick={() => handleSelect(index)}
-                secondaryAction={
-                  edit ? (
-                    <Tooltip title="Remove" placement="left">
-                      <IconButton
-                        aria-label="delete"
-                        size="small"
-                        onClick={(e) => {
-                          handleRemove(index);
-                          e.stopPropagation();
-                        }}
-                      >
-                        <IconRemove color="error" />
-                        {/* <DeleteIcon /> */}
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip
-                      title={
-                        !item.visibility
-                          ? showCollections
-                            ? "Collection Hidden"
-                            : "Collection Visible"
-                          : showCollections
-                          ? "Collection Visible"
-                          : "Collection Hidden"
-                      }
-                      placement="left"
-                    >
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          handleVisibility(index);
-                          e.stopPropagation();
-                        }}
-                      >
-                        {item.visibility
-                          ? showCollections
-                            ? btn[1].item
-                            : btn[2].item
-                          : btn[0].item}
-                      </IconButton>
-                    </Tooltip>
-                  )
-                }
-              >
-                {edit ? (
-                  <DragHandleIcon className="drag" />
-                ) : (
-                  <>
-                    {item.selected ? (
-                      <IconFull color="primary" />
-                    ) : (
-                      <IconEmpty sx={{ opacity: 0.5 }} />
-                    )}
-                  </>
-                )}
-                {edit ? (
-                  <TextField
-                    hiddenLabel
-                    placeholder="Add Collection"
-                    variant="standard"
-                    value={item.text}
-                    fullWidth
-                    sx={{ mr: 1, ml: 1 }}
-                    onChange={(e) => handleRename(e, index)}
-                  />
-                ) : (
-                  <ListItemText primary={item.text} sx={{ ml: 1 }} />
-                )}
-              </ListItem>
-            </Draggable>
-          ))}
-        </Container>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={list.map((_, index) => `item-${index}`)}
+            strategy={verticalListSortingStrategy}
+          >
+            {list.map((item, index) => (
+              <SortableItem
+                key={`item-${index}`}
+                id={`item-${index}`}
+                item={item}
+                index={index}
+                edit={edit}
+                showCollections={showCollections}
+                handleSelect={handleSelect}
+                handleRemove={handleRemove}
+                handleVisibility={handleVisibility}
+                handleRename={handleRename}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
         <ListItem>
           <TextField
             hiddenLabel

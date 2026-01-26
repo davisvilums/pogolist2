@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm outdated:*)"
+      "Bash(npm outdated:*)",
+      "Bash(npm install)",
+      "Bash(timeout 20 npm start)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(pkill:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
