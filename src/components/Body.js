@@ -49,6 +49,9 @@ export default function Body({
   setSelected,
   showCollections,
   toggleCollections,
+  lastAction,
+  handleUndo,
+  focusedCollection,
 }) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
@@ -67,34 +70,31 @@ export default function Body({
 
     pl = runFilters(pl, filters);
 
-    // list.forEach((i) => {
-    //   if (i.visibility == 1) {
-    //     // console.log(i.visibility, " asdfasdfsd");
-    //     showAll = false;
-    //     return;
-    //   }
-    // });
-
-    pl = pl.map((item) => {
-      item.show = showAll;
-      list.forEach((i) => {
-        var pok = i;
-        if (pok.pokemon && pok.pokemon.includes(item.id)) {
-          if (pok.visibility) {
-            item.show = showCollections;
-          }
-        }
+    if (focusedCollection !== null && list[focusedCollection]) {
+      const focusedPokemon = list[focusedCollection].pokemon || [];
+      pl = pl.map((item) => {
+        item.show = focusedPokemon.includes(item.id);
+        return item;
       });
-      return item;
-    });
+    } else {
+      pl = pl.map((item) => {
+        item.show = showAll;
+        list.forEach((i) => {
+          if (i.pokemon && i.pokemon.includes(item.id)) {
+            if (i.visibility) {
+              item.show = showCollections;
+            }
+          }
+        });
+        return item;
+      });
+    }
 
     pl = pl.filter((p) => p.show == true);
 
-    // console.log(pl, selected);
-
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, showCollections]);
+  }, [filters, list, selected.pokemon, showCollections, focusedCollection]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -166,6 +166,8 @@ export default function Body({
         toggleFilters={() => setShowFilters(!showfilters)}
         toggleCollections={toggleCollections}
         showCollections={showCollections}
+        lastAction={lastAction}
+        handleUndo={handleUndo}
       />
       {showfilters && (
         <TagFilters filtersList={filters} setFilters={setFilters} />

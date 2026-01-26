@@ -17,8 +17,16 @@ import IconCheck from "@mui/icons-material/CheckCircleOutlined";
 import IconEmpty from "@mui/icons-material/RadioButtonUncheckedOutlined";
 import IconFull from "@mui/icons-material/RadioButtonChecked";
 import IconRemove from "@mui/icons-material/RemoveCircleOutline";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
-export default function Sidebar({ edit, list, setList, showCollections }) {
+export default function Sidebar({
+  edit,
+  list,
+  setList,
+  showCollections,
+  focusedCollection,
+  handleFocusCollection,
+}) {
   const [text, setText] = useState("");
 
   const textInput = useRef(null);
@@ -33,7 +41,12 @@ export default function Sidebar({ edit, list, setList, showCollections }) {
   };
   const handleAdd = () => {
     if (text !== "") {
-      const newList = list.concat({ text: text, visibility: false, selected: false, pokemon: [] });
+      const newList = list.concat({
+        text: text,
+        visibility: false,
+        selected: false,
+        pokemon: [],
+      });
       setList(newList);
       setText("");
       if (textInput.current) textInput.current.focus();

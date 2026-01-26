@@ -14,6 +14,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { styled } from "@mui/material/styles";
 import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import UndoIcon from "@mui/icons-material/Undo";
 
 const Table = styled(TableC)`
   width: initial;
@@ -56,7 +58,9 @@ function EnhancedTableHead({ order, orderBy, onRequestSort }) {
   return (
     <TableHead>
       <TableRow>
-        <TableCell sx={{ display: { xs: "none", sm: "block" } }}>Sort&nbsp;by:</TableCell>
+        <TableCell sx={{ display: { xs: "none", sm: "block" } }}>
+          Sort&nbsp;by:
+        </TableCell>
         {headCells.map((headCell) => (
           <TableCell
             key={headCell.id}
@@ -89,6 +93,8 @@ export default function ToolbarPoke(props) {
     orderBy,
     toggleFilters,
     title,
+    lastAction,
+    handleUndo,
   } = props;
 
   return (
@@ -98,7 +104,10 @@ export default function ToolbarPoke(props) {
         pr: { xs: 1, sm: 3 },
         ...(numSelected > 0 && {
           bgcolor: (theme) =>
-            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+            alpha(
+              theme.palette.primary.main,
+              theme.palette.action.activatedOpacity
+            ),
         }),
         flexWrap: { xs: "wrap", sm: "initial" },
       }}
@@ -124,6 +133,10 @@ export default function ToolbarPoke(props) {
             {title}
           </Typography>
         )}
+        {/* Show the visible pokemon count here */}
+        <Typography variant="body1" id="tableTitle" sx={{ m: "0 auto 0 20px" }}>
+          {rowCount}
+        </Typography>
       </Box>
       <Box
         sx={{
@@ -154,7 +167,7 @@ export default function ToolbarPoke(props) {
         </TableContainer>
       </Box>
 
-      <Box sx={{ ml: 2 }}>
+      <Box sx={{ ml: 2, display: "flex", alignItems: "center" }}>
         {numSelected > 0 ? (
           <Tooltip title="Delete">
             <IconButton>
@@ -166,6 +179,21 @@ export default function ToolbarPoke(props) {
             <IconButton onClick={toggleFilters}>
               <FilterListIcon />
             </IconButton>
+          </Tooltip>
+        )}
+        {lastAction ? (
+          <Tooltip title="Undo last add">
+            <IconButton onClick={handleUndo}>
+              <UndoIcon />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Tooltip title="Undo last add">
+            <span>
+              <IconButton disabled>
+                <UndoIcon />
+              </IconButton>
+            </span>
           </Tooltip>
         )}
       </Box>

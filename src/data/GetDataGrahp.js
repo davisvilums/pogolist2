@@ -50,13 +50,14 @@ function determineSprite(pokemon) {
 
   // Specific sprite overrides based on unique IDs or conditions
   const specialSprites = {
-    // 10178:
-    //   "https://archives.bulbagarden.net/media/upload/thumb/3/39/HOME555GZ.png/220px-HOME555GZ.png",
-    // 10182:
-    //   "https://archives.bulbagarden.net/media/upload/3/32/902Basculegion.png",
-    // 10183:
-    //   "https://archives.bulbagarden.net/media/upload/thumb/0/01/HOME845Go.png/220px-HOME845Go.png",
-    // Add other special cases here
+    10264: "./img/pokemon/10264.png", // Koraidon Limited Build
+    10265: "./img/pokemon/10265.png", // Koraidon Sprinting Build
+    10266: "./img/pokemon/10265.png", // Koraidon Swimming Build
+    10267: "./img/pokemon/10264.png", // Koraidon Gliding Build
+    10268: "./img/pokemon/10268.png", // Miraidon Low Power Mode
+    10269: "./img/pokemon/10269.png", // Miraidon Drive Mode
+    10270: "./img/pokemon/10270.png", // Miraidon Aquatic Mode
+    10271: "./img/pokemon/10271.png", // Miraidon Glide Mode
   };
 
   // Check if there's a special sprite for this Pokemon ID
@@ -68,7 +69,7 @@ function determineSprite(pokemon) {
   if (pokemon.id > 891 && pokemon.id < 1000) {
     spriteUrl = `https://assets.pokemon.com/assets/cms2/img/pokedex/detail/${pokemon.id}.png`;
   } else if (pokemon.name.includes("-gmax")) {
-    spriteUrl = `https://img.pokemondb.net/artwork/avif/${pokemon.name}.avif`;
+    spriteUrl = `https://raw.githubusercontent.com/msikma/pokesprite/master/pokemon-gen8/regular/${pokemon.name}.png`;
   } else {
     // Default to official artwork for most cases
     spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
@@ -109,7 +110,7 @@ async function GetDataGrahp() {
           pok.tags.push("legendary");
         if (pokemon.pokemon_v2_pokemonspecy.is_mythical)
           pok.tags.push("mythical");
-        // if (pokemon.pokemon_v2_pokemonforms[0].is_mega) pok.tags.push("mega");
+        if (pokemon.name.includes("-mega")) pok.tags.push("mega");
         if (pokemon.name.includes("-gmax")) pok.tags.push("gmax");
 
         if (pokemon.order < 0) {

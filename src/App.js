@@ -16,6 +16,8 @@ import Typography from "@mui/material/Typography";
 import { Button } from "@mui/material";
 import IconCross from "@mui/icons-material/CancelOutlined";
 import IconCheck from "@mui/icons-material/CheckCircleOutlined";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import GetDataGrahp from "./data/GetDataGrahp";
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
@@ -63,12 +65,13 @@ export default function PersistentDrawerLeft() {
   const [list, setList] = React.useState(
     JSON.parse(localStorage.getItem("collection")) || listD
   );
-  const [update, setUpdate] = React.useState(true);
   const [selected, setSelected] = React.useState([]);
   const [showCollections, setCollections] = React.useState(false);
+  const [focusedCollection, setFocusedCollection] = React.useState(null);
   const [pokemonData, setPokemonData] = React.useState(
     JSON.parse(localStorage.getItem("pokelist")) || ""
   );
+  const [lastAction, setLastAction] = React.useState(null);
 
   React.useEffect(() => {
     async function fetchPokemonData() {
@@ -116,17 +119,59 @@ export default function PersistentDrawerLeft() {
   };
   const handleCollections = () => {
     setCollections(!showCollections);
+    if (focusedCollection) setFocusedCollection(null);
+  };
+  const handleFocusCollection = (index) => {
+    setFocusedCollection(focusedCollection === index ? null : index);
   };
   const updateSelected = (l) => {
-    let obj = list.find((o) => o.selected === true);
+    const selectedIndex = list.findIndex((o) => o.selected === true);
 
-    if (obj) {
-      let i = list.indexOf(obj);
-      list[i].pokemon = l;
-      setList(list);
-      setUpdate(!update);
+    if (selectedIndex !== -1) {
+      const oldPokemonList = list[selectedIndex].pokemon;
+
+      if (l.length > oldPokemonList.length) {
+        const added = l.filter((p) => !oldPokemonList.includes(p));
+        if (added.length > 0) {
+          setLastAction({
+            type: "add",
+            pokemonId: added[0],
+            collectionIndex: selectedIndex,
+          });
+        }
+      } else {
+        setLastAction(null);
+      }
+
+      const newList = list.map((item, index) => {
+        if (index === selectedIndex) {
+          return { ...item, pokemon: l };
+        }
+        return item;
+      });
+      setList(newList);
     }
   };
+
+  const handleUndo = () => {
+    if (lastAction && lastAction.type === "add") {
+      const { pokemonId, collectionIndex } = lastAction;
+
+      const newList = list.map((item, index) => {
+        if (index === collectionIndex) {
+          return {
+            ...item,
+            pokemon: item.pokemon.filter((id) => id !== pokemonId),
+          };
+        }
+        return item;
+      });
+
+      setList(newList);
+      setLastAction(null); // Only one undo.
+    }
+  };
+
   React.useEffect(() => {
     let obj = list.find((o) => o.selected === true);
     if (obj) {
@@ -135,7 +180,7 @@ export default function PersistentDrawerLeft() {
       setSelected({});
     }
     localStorage.setItem("collection", JSON.stringify(list));
-  }, [list, update]);
+  }, [list]);
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -171,15 +216,44 @@ export default function PersistentDrawerLeft() {
               <EditIcon color={edit ? "primary" : "default"} />
             </IconButton>
           </Tooltip>
-          <Typography variant="p" id="tableTitle" sx={{ m: "0 auto 0 20px" }}>
-            Collections
-          </Typography>
+          <Tooltip
+            title={
+              focusedCollection !== null
+                ? "Show all collections"
+                : "Focus on current collection"
+            }
+            placement="right"
+          >
+            <span>
+              <IconButton
+                onClick={() => {
+                  const selectedIndex = list.findIndex((item) => item.selected);
+                  if (selectedIndex !== -1) {
+                    handleFocusCollection(selectedIndex);
+                  }
+                }}
+                disabled={!list.some((item) => item.selected)}
+              >
+                {focusedCollection !== null ? (
+                  <VisibilityOffIcon />
+                ) : (
+                  <VisibilityIcon />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Typography
+            variant="p"
+            id="tableTitle"
+            sx={{ m: "0 auto 0 20px" }}
+          ></Typography>
           <Box
             sx={{
-              // ml: "auto",
-              mr: "6px",
+              mr: "4px",
               order: { xs: 1, sm: "initial" },
               width: { xs: "100%", sm: "initial" },
+              display: "flex",
+              gap: 0.5,
             }}
           >
             <Tooltip
@@ -208,6 +282,8 @@ export default function PersistentDrawerLeft() {
           setList={setList}
           list={list}
           showCollections={showCollections}
+          focusedCollection={focusedCollection}
+          handleFocusCollection={handleFocusCollection}
         />
       </Drawer>
       <Main open={open} width={drawerWidth}>
@@ -220,6 +296,9 @@ export default function PersistentDrawerLeft() {
             setSelected={updateSelected}
             showCollections={showCollections}
             toggleCollections={handleCollections}
+            lastAction={lastAction}
+            handleUndo={handleUndo}
+            focusedCollection={focusedCollection}
           />
         )}
       </Main>
