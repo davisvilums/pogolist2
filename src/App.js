@@ -1,4 +1,5 @@
 import * as React from "react";
+import { v4 as uuidv4 } from "uuid";
 import { styled, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -12,13 +13,10 @@ import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Body from "./components/Body";
 import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import { Button } from "@mui/material";
-import IconCross from "@mui/icons-material/CancelOutlined";
-import IconCheck from "@mui/icons-material/CheckCircleOutlined";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import GetDataGrahp from "./data/GetDataGrahp";
+
+// Data version - increment this when pokelist.json structure changes
+const DATA_VERSION = 8;
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
@@ -50,9 +48,10 @@ const DrawerHeader = styled("div")(({ theme }) => ({
 
 const listD = [
   {
+    id: "default-collection",
     text: "Test Collection",
     selected: true,
-    visibility: 0,
+    visibility: "ignore", // "ignore" | "hide" | "spotlight"
     pokemon: [289, 248, 468, 473, 149, 409, 464, 609, 612],
   },
 ];
@@ -62,15 +61,29 @@ export default function PersistentDrawerLeft() {
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
   const [edit, setEdit] = React.useState(false);
-  const [list, setList] = React.useState(
-    JSON.parse(localStorage.getItem("collection")) || listD
-  );
+  const [list, setList] = React.useState(() => {
+    const stored = JSON.parse(localStorage.getItem("collection")) || listD;
+    // Migrate old data: add unique IDs and convert visibility format
+    return stored.map((item) => ({
+      ...item,
+      id: item.id || uuidv4(), // Add unique ID if missing
+      visibility:
+        typeof item.visibility === "string"
+          ? item.visibility
+          : "ignore", // Convert old boolean/number to "ignore"
+    }));
+  });
   const [selected, setSelected] = React.useState([]);
-  const [showCollections, setCollections] = React.useState(false);
-  const [focusedCollection, setFocusedCollection] = React.useState(null);
-  const [pokemonData, setPokemonData] = React.useState(
-    JSON.parse(localStorage.getItem("pokelist")) || ""
-  );
+  const [pokemonData, setPokemonData] = React.useState(() => {
+    const storedVersion = localStorage.getItem("pokelistVersion");
+    if (storedVersion && parseInt(storedVersion) >= DATA_VERSION) {
+      const stored = localStorage.getItem("pokelist");
+      if (stored) return JSON.parse(stored);
+    }
+    // Clear outdated cache
+    localStorage.removeItem("pokelist");
+    return "";
+  });
   const [lastAction, setLastAction] = React.useState(null);
 
   React.useEffect(() => {
@@ -92,6 +105,8 @@ export default function PersistentDrawerLeft() {
             return item;
           });
           setPokemonData(result);
+          localStorage.setItem("pokelist", JSON.stringify(result));
+          localStorage.setItem("pokelistVersion", DATA_VERSION.toString());
         } catch (error) {
           console.error("Error fetching Pokemon data:", error);
 
@@ -101,6 +116,7 @@ export default function PersistentDrawerLeft() {
             console.log("newPokeList", newPokeList);
             setPokemonData(newPokeList);
             localStorage.setItem("pokelist", JSON.stringify(newPokeList));
+            localStorage.setItem("pokelistVersion", DATA_VERSION.toString());
           } catch (graphError) {
             console.error("Error fetching from GraphQL:", graphError);
           }
@@ -116,13 +132,6 @@ export default function PersistentDrawerLeft() {
   };
   const handleDrawerOpen = () => {
     setOpen(true);
-  };
-  const handleCollections = () => {
-    setCollections(!showCollections);
-    if (focusedCollection) setFocusedCollection(null);
-  };
-  const handleFocusCollection = (index) => {
-    setFocusedCollection(focusedCollection === index ? null : index);
   };
   const updateSelected = (l) => {
     const selectedIndex = list.findIndex((o) => o.selected === true);
@@ -211,79 +220,18 @@ export default function PersistentDrawerLeft() {
               <ChevronRightIcon />
             )}
           </IconButton>
-          <Tooltip title="Edit Collections" placement="left">
-            <IconButton sx={{}} onClick={() => setEdit(!edit)}>
+          <Tooltip title="Edit Collections" placement="right">
+            <IconButton onClick={() => setEdit(!edit)}>
               <EditIcon color={edit ? "primary" : "default"} />
             </IconButton>
           </Tooltip>
-          <Tooltip
-            title={
-              focusedCollection !== null
-                ? "Show all collections"
-                : "Focus on current collection"
-            }
-            placement="right"
-          >
-            <span>
-              <IconButton
-                onClick={() => {
-                  const selectedIndex = list.findIndex((item) => item.selected);
-                  if (selectedIndex !== -1) {
-                    handleFocusCollection(selectedIndex);
-                  }
-                }}
-                disabled={!list.some((item) => item.selected)}
-              >
-                {focusedCollection !== null ? (
-                  <VisibilityOffIcon />
-                ) : (
-                  <VisibilityIcon />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Typography
-            variant="p"
-            id="tableTitle"
-            sx={{ m: "0 auto 0 20px" }}
-          ></Typography>
-          <Box
-            sx={{
-              mr: "4px",
-              order: { xs: 1, sm: "initial" },
-              width: { xs: "100%", sm: "initial" },
-              display: "flex",
-              gap: 0.5,
-            }}
-          >
-            <Tooltip
-              title={
-                showCollections
-                  ? "Hide selected collections"
-                  : "Show selected collections"
-              }
-              placement="right"
-            >
-              <Button onClick={handleCollections}>
-                {showCollections ? "Hide" : "Show"}
-                &nbsp;
-                {showCollections ? (
-                  <IconCross color="error" />
-                ) : (
-                  <IconCheck color="secondary" />
-                )}
-              </Button>
-            </Tooltip>
-          </Box>
         </DrawerHeader>
         <Divider />
         <Sidebar
           edit={edit}
           setList={setList}
           list={list}
-          showCollections={showCollections}
-          focusedCollection={focusedCollection}
-          handleFocusCollection={handleFocusCollection}
+          pokemonData={pokemonData}
         />
       </Drawer>
       <Main open={open} width={drawerWidth}>
@@ -294,11 +242,8 @@ export default function PersistentDrawerLeft() {
             list={list}
             selected={selected}
             setSelected={updateSelected}
-            showCollections={showCollections}
-            toggleCollections={handleCollections}
             lastAction={lastAction}
             handleUndo={handleUndo}
-            focusedCollection={focusedCollection}
           />
         )}
       </Main>

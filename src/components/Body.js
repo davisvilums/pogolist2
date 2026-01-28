@@ -47,11 +47,8 @@ export default function Body({
   list,
   selected,
   setSelected,
-  showCollections,
-  toggleCollections,
   lastAction,
   handleUndo,
-  focusedCollection,
 }) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
@@ -66,35 +63,41 @@ export default function Body({
   React.useMemo(() => {
     if (!rows) return "";
     let pl = data;
-    let showAll = !showCollections;
 
+    // Apply tag/generation filters
     pl = runFilters(pl, filters);
 
-    if (focusedCollection !== null && list[focusedCollection]) {
-      const focusedPokemon = list[focusedCollection].pokemon || [];
+    // Check for spotlight collection (only one can be active)
+    const spotlightCollection = list.find((c) => c.visibility === "spotlight");
+
+    if (spotlightCollection) {
+      // Spotlight mode: show only Pokemon in the spotlighted collection
+      const spotlightPokemon = spotlightCollection.pokemon || [];
       pl = pl.map((item) => {
-        item.show = focusedPokemon.includes(item.id);
+        item.show = spotlightPokemon.includes(item.id);
         return item;
       });
     } else {
+      // Normal mode: apply hide filters
+      const hiddenPokemonIds = new Set();
+
+      list.forEach((collection) => {
+        if (collection.visibility === "hide" && collection.pokemon) {
+          collection.pokemon.forEach((id) => hiddenPokemonIds.add(id));
+        }
+      });
+
       pl = pl.map((item) => {
-        item.show = showAll;
-        list.forEach((i) => {
-          if (i.pokemon && i.pokemon.includes(item.id)) {
-            if (i.visibility) {
-              item.show = showCollections;
-            }
-          }
-        });
+        item.show = !hiddenPokemonIds.has(item.id);
         return item;
       });
     }
 
-    pl = pl.filter((p) => p.show == true);
+    pl = pl.filter((p) => p.show === true);
 
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, showCollections, focusedCollection]);
+  }, [filters, list, selected.pokemon, data]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -164,8 +167,6 @@ export default function Body({
         orderBy={orderBy}
         order={order}
         toggleFilters={() => setShowFilters(!showfilters)}
-        toggleCollections={toggleCollections}
-        showCollections={showCollections}
         lastAction={lastAction}
         handleUndo={handleUndo}
       />

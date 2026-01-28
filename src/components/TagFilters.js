@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 
-const filtersList = {
+const defaultFilters = {
   released: true,
   unreleased: false,
   normal: true,
   legendary: false,
   mythical: false,
+  ultra: false,
   mega: false,
   baby: true,
   gmax: false,
@@ -22,6 +23,21 @@ const filtersList = {
   g9: true,
 };
 
+// Load filters from localStorage or use defaults
+const getStoredFilters = () => {
+  try {
+    const stored = localStorage.getItem("pokemonFilters");
+    if (stored) {
+      return { ...defaultFilters, ...JSON.parse(stored) };
+    }
+  } catch (e) {
+    console.error("Error loading filters from localStorage:", e);
+  }
+  return defaultFilters;
+};
+
+const filtersList = getStoredFilters();
+
 const runFilters = (pl, filters) => {
   // console.log(pl, filters);
   if (filters) {
@@ -34,6 +50,8 @@ const runFilters = (pl, filters) => {
       pl = pl.filter((p) => p.tags && !p.tags.includes("legendary"));
     if (!filters["mythical"])
       pl = pl.filter((p) => p.tags && !p.tags.includes("mythical"));
+    if (!filters["ultra"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("ultra"));
     if (!filters["baby"])
       pl = pl.filter((p) => p.tags && !p.tags.includes("baby"));
     if (!filters["unreleased"]) pl = pl.filter((p) => p.released);
@@ -56,7 +74,13 @@ const TagFilters = ({ filtersList, setFilters }) => {
 
   useEffect(() => {
     if (setFilters) setFilters(filters);
-  }, [filters]);
+    // Save filters to localStorage
+    try {
+      localStorage.setItem("pokemonFilters", JSON.stringify(filters));
+    } catch (e) {
+      console.error("Error saving filters to localStorage:", e);
+    }
+  }, [filters, setFilters]);
 
   const handleClick = (value) => {
     const nf = Object.assign({}, filters);

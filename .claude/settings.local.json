@@ -7,7 +7,21 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(pkill:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(node /Users/davisvilums/Sites/pogolist2/scripts/update-pokelist.js:*)",
+      "Bash(node -e:*)",
+      "WebSearch",
+      "WebFetch(domain:www.serebii.net)",
+      "Bash(__NEW_LINE_dc289a4dbd9cc743__ echo -e \"\\\\n=== Pokemon using local sprites ===\")",
+      "WebFetch(domain:pokemongo.fandom.com)",
+      "WebFetch(domain:pokemongohub.net)",
+      "WebFetch(domain:pogo.gamepress.gg)",
+      "WebFetch(domain:www.dexerto.com)",
+      "WebFetch(domain:bulbapedia.bulbagarden.net)",
+      "WebFetch(domain:www.dragonflycave.com)",
+      "Bash(npm install:*)"
     ]
   }
 }

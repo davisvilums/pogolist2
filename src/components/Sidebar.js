@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
+import { v4 as uuidv4 } from "uuid";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
+import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
@@ -23,27 +25,41 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import DataImportExport from "./DataImportExport";
 
 import IconPlus from "@mui/icons-material/ControlPoint";
 import IconCross from "@mui/icons-material/CancelOutlined";
-import IconCheck from "@mui/icons-material/CheckCircleOutlined";
 import IconEmpty from "@mui/icons-material/RadioButtonUncheckedOutlined";
 import IconFull from "@mui/icons-material/RadioButtonChecked";
 import IconRemove from "@mui/icons-material/RemoveCircleOutline";
+import StarIcon from "@mui/icons-material/Star";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
-const btn = [
-  { title: "Ignore", item: <IconEmpty /> },
-  { title: "Show", item: <IconCheck color="secondary" /> },
-  { title: "Hide", item: <IconCross color="error" /> },
-];
+// Visibility states: "ignore" | "hide" | "spotlight"
+const visibilityStates = {
+  ignore: {
+    title: "Ignore (click to hide)",
+    icon: <IconEmpty sx={{ opacity: 0.5 }} />,
+    next: "hide"
+  },
+  hide: {
+    title: "Hidden (click to spotlight)",
+    icon: <VisibilityOffIcon color="error" />,
+    next: "spotlight"
+  },
+  spotlight: {
+    title: "Spotlight (click to ignore)",
+    icon: <StarIcon sx={{ color: "#ffc107" }} />,
+    next: "ignore"
+  },
+};
 
 function SortableItem({
   id,
   item,
   index,
   edit,
-  showCollections,
   handleSelect,
   handleRemove,
   handleVisibility,
@@ -55,12 +71,20 @@ function SortableItem({
     setNodeRef,
     transform,
     transition,
+    isDragging,
   } = useSortable({ id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 1 : 0,
+    position: "relative",
   };
+
+  // Get current visibility state (default to "ignore" for backwards compatibility)
+  const currentVisibility = item.visibility || "ignore";
+  const visState = visibilityStates[currentVisibility] || visibilityStates.ignore;
 
   return (
     <ListItem
@@ -84,18 +108,7 @@ function SortableItem({
             </IconButton>
           </Tooltip>
         ) : (
-          <Tooltip
-            title={
-              !item.visibility
-                ? showCollections
-                  ? "Collection Hidden"
-                  : "Collection Visible"
-                : showCollections
-                ? "Collection Visible"
-                : "Collection Hidden"
-            }
-            placement="left"
-          >
+          <Tooltip title={visState.title} placement="left">
             <IconButton
               size="small"
               onClick={(e) => {
@@ -103,11 +116,7 @@ function SortableItem({
                 e.stopPropagation();
               }}
             >
-              {item.visibility
-                ? showCollections
-                  ? btn[1].item
-                  : btn[2].item
-                : btn[0].item}
+              {visState.icon}
             </IconButton>
           </Tooltip>
         )
@@ -141,13 +150,56 @@ function SortableItem({
   );
 }
 
+// Extract first name only (remove regional variants like alola, galar, spring, etc.)
+function getFirstName(name) {
+  if (!name) return "";
+  // Split by hyphen or space and take only the first part
+  const parts = name.toLowerCase().split(/[-\s]/);
+  // Capitalize first letter
+  return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+}
+
+function SelectedPokemonNames({ list, pokemonData }) {
+  // Find the selected collection
+  const selectedCollection = list.find((item) => item.selected);
+
+  // Get Pokemon names for the selected collection
+  const getSelectedNames = () => {
+    if (!selectedCollection || !selectedCollection.pokemon || !pokemonData) {
+      return "";
+    }
+
+    const names = selectedCollection.pokemon
+      .map((id) => {
+        const pokemon = pokemonData.find((p) => p.id === id);
+        return pokemon ? getFirstName(pokemon.name) : null;
+      })
+      .filter(Boolean);
+
+    return names.join(", ");
+  };
+
+  return (
+    <Box sx={{ p: 2, pt: 0 }}>
+      <TextField
+        multiline
+        rows={3}
+        value={getSelectedNames()}
+        placeholder="Selected Pokemon names will appear here"
+        variant="outlined"
+        size="small"
+        fullWidth
+        InputProps={{ readOnly: true }}
+      />
+    </Box>
+  );
+}
+
 export default function Sidebar({
   edit,
   list,
   setList,
-  showCollections,
-  focusedCollection,
-  handleFocusCollection,
+  pokemonData,
 }) {
   const [text, setText] = useState("");
 
@@ -164,8 +216,9 @@ export default function Sidebar({
   const handleAdd = () => {
     if (text !== "") {
       const newList = list.concat({
+        id: uuidv4(),
         text: text,
-        visibility: false,
+        visibility: "ignore", // New default state
         selected: false,
         pokemon: [],
       });
@@ -177,12 +230,11 @@ export default function Sidebar({
   const handleRemove = (index) => {
     const newList = [...list];
     newList.splice(index, 1);
-    console.log(newList);
     setList(newList);
   };
   const handleSelect = (index) => {
     const newList = list.map((item) => {
-      if (list[index] != item) item["selected"] = false;
+      if (list[index] !== item) item["selected"] = false;
       return item;
     });
     newList[index]["selected"] = !list[index]["selected"];
@@ -190,30 +242,56 @@ export default function Sidebar({
   };
   const handleRename = (event, index) => {
     const newList = [...list];
-    // console.log(newList, index);
     newList[index]["text"] = event.target.value;
     setList(newList);
   };
   const handleVisibility = (index) => {
     const newList = [...list];
-    // const vis = (newList[index]["visibility"] + 1) % 2;
-    newList[index]["visibility"] = !newList[index]["visibility"];
+    const currentVis = newList[index]["visibility"] || "ignore";
+    const nextVis = visibilityStates[currentVis]?.next || "ignore";
+
+    // If setting to spotlight, clear other spotlights first
+    if (nextVis === "spotlight") {
+      newList.forEach((item, i) => {
+        if (i !== index && item.visibility === "spotlight") {
+          item.visibility = "ignore";
+        }
+      });
+    }
+
+    newList[index]["visibility"] = nextVis;
     setList(newList);
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before activating drag
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
+  // Ensure all items have stable IDs (migration for existing data)
+  const getItemId = (item, index) => item.id || `legacy-${index}`;
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
-      const oldIndex = list.findIndex((_, i) => `item-${i}` === active.id);
-      const newIndex = list.findIndex((_, i) => `item-${i}` === over.id);
-      setList(arrayMove(list, oldIndex, newIndex));
+      const oldIndex = list.findIndex((item, i) => getItemId(item, i) === active.id);
+      const newIndex = list.findIndex((item, i) => getItemId(item, i) === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // Migrate items to have stable IDs if they don't have them
+        const newList = arrayMove(list, oldIndex, newIndex).map((item) => {
+          if (!item.id) {
+            return { ...item, id: uuidv4() };
+          }
+          return item;
+        });
+        setList(newList);
+      }
     }
   };
 
@@ -224,19 +302,19 @@ export default function Sidebar({
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis]}
         >
           <SortableContext
-            items={list.map((_, index) => `item-${index}`)}
+            items={list.map((item, index) => getItemId(item, index))}
             strategy={verticalListSortingStrategy}
           >
             {list.map((item, index) => (
               <SortableItem
-                key={`item-${index}`}
-                id={`item-${index}`}
+                key={getItemId(item, index)}
+                id={getItemId(item, index)}
                 item={item}
                 index={index}
                 edit={edit}
-                showCollections={showCollections}
                 handleSelect={handleSelect}
                 handleRemove={handleRemove}
                 handleVisibility={handleVisibility}
@@ -270,6 +348,7 @@ export default function Sidebar({
       </List>
       <Divider />
       <DataImportExport />
+      <SelectedPokemonNames list={list} pokemonData={pokemonData} />
       <List>
         {/* {["All mail", "Trash", "Spam"].map((text, index) => (
           <ListItem button key={text}>
