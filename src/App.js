@@ -86,6 +86,12 @@ export default function PersistentDrawerLeft() {
   });
   const [lastAction, setLastAction] = React.useState(null);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [showCollectionTags, setShowCollectionTags] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("showCollectionTags")) || false;
+  });
+  const [tagVisibility, setTagVisibility] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("tagVisibility")) || {};
+  });
 
   React.useEffect(() => {
     async function fetchPokemonData() {
@@ -182,6 +188,27 @@ export default function PersistentDrawerLeft() {
     }
   };
 
+  const removePokemonFromCollection = (pokemonId, collectionId) => {
+    const newList = list.map((item) => {
+      if (item.id === collectionId) {
+        return {
+          ...item,
+          pokemon: item.pokemon.filter((id) => id !== pokemonId),
+        };
+      }
+      return item;
+    });
+    setList(newList);
+  };
+
+  React.useEffect(() => {
+    localStorage.setItem("showCollectionTags", JSON.stringify(showCollectionTags));
+  }, [showCollectionTags]);
+
+  React.useEffect(() => {
+    localStorage.setItem("tagVisibility", JSON.stringify(tagVisibility));
+  }, [tagVisibility]);
+
   React.useEffect(() => {
     let obj = list.find((o) => o.selected === true);
     if (obj) {
@@ -201,6 +228,8 @@ export default function PersistentDrawerLeft() {
         handleDrawerOpen={handleDrawerOpen}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        showCollectionTags={showCollectionTags}
+        setShowCollectionTags={setShowCollectionTags}
       />
       <Drawer
         sx={{
@@ -235,6 +264,9 @@ export default function PersistentDrawerLeft() {
           setList={setList}
           list={list}
           pokemonData={pokemonData}
+          showCollectionTags={showCollectionTags}
+          tagVisibility={tagVisibility}
+          setTagVisibility={setTagVisibility}
         />
       </Drawer>
       <Main open={open} width={drawerWidth}>
@@ -248,6 +280,9 @@ export default function PersistentDrawerLeft() {
             lastAction={lastAction}
             handleUndo={handleUndo}
             searchTerm={searchTerm}
+            showCollectionTags={showCollectionTags}
+            tagVisibility={tagVisibility}
+            removePokemonFromCollection={removePokemonFromCollection}
           />
         )}
       </Main>

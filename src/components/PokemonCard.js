@@ -1,7 +1,6 @@
 import * as React from "react";
 import { styled } from "@mui/material/styles";
 import Check from "@mui/icons-material/CheckBox";
-// import styled from "styled-components";
 
 const PokemonItem = styled("div")`
   border: 1px solid #ddd;
@@ -80,7 +79,41 @@ const PokemonCP = styled("div")`
   line-height: 1em;
 `;
 
-function PokemonCard({ pokemon, selected, select }) {
+const CollectionTagsWrap = styled("div")`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px 2px 3px;
+  justify-content: center;
+`;
+
+const CollectionTag = styled("span")`
+  display: inline-flex;
+  align-items: center;
+  background: #e3e8f7;
+  color: #3f51b5;
+  font-size: 9px;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 3px;
+  max-width: 96px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  & .tag-x {
+    margin-left: 2px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: bold;
+    opacity: 0.6;
+    &:hover {
+      opacity: 1;
+    }
+  }
+`;
+
+function PokemonCard({ pokemon, selected, select, collections, showCollectionTags, removePokemonFromCollection }) {
   var TitleSize = "15px";
 
   if (pokemon.name.length > 15) {
@@ -108,6 +141,24 @@ function PokemonCard({ pokemon, selected, select }) {
           <div>{pokemon.name.split("-").join(" ")}</div>
         </PokemonName>
         <PokemonCP>CP {pokemon.cp}</PokemonCP>
+        {showCollectionTags && collections && collections.length > 0 && (
+          <CollectionTagsWrap>
+            {collections.map((c) => (
+              <CollectionTag key={c.id}>
+                {c.text}
+                <span
+                  className="tag-x"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removePokemonFromCollection(pokemon.id, c.id);
+                  }}
+                >
+                  ×
+                </span>
+              </CollectionTag>
+            ))}
+          </CollectionTagsWrap>
+        )}
       </PokemonMeta>
     </PokemonItem>
   );

@@ -35,6 +35,8 @@ import IconFull from "@mui/icons-material/RadioButtonChecked";
 import IconRemove from "@mui/icons-material/RemoveCircleOutline";
 import StarIcon from "@mui/icons-material/Star";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import LabelIcon from "@mui/icons-material/Label";
+import LabelOffIcon from "@mui/icons-material/LabelOff";
 
 // Visibility states: "ignore" | "hide" | "spotlight"
 const visibilityStates = {
@@ -64,6 +66,9 @@ function SortableItem({
   handleRemove,
   handleVisibility,
   handleRename,
+  showCollectionTags,
+  tagVisible,
+  onToggleTagVisibility,
 }) {
   const {
     attributes,
@@ -108,17 +113,36 @@ function SortableItem({
             </IconButton>
           </Tooltip>
         ) : (
-          <Tooltip title={visState.title} placement="left">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                handleVisibility(index);
-                e.stopPropagation();
-              }}
-            >
-              {visState.icon}
-            </IconButton>
-          </Tooltip>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {showCollectionTags && (
+              <Tooltip title={tagVisible ? "Hide tag" : "Show tag"} placement="left">
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleTagVisibility(item.id);
+                  }}
+                >
+                  {tagVisible ? (
+                    <LabelIcon sx={{ fontSize: 18, color: "#3f51b5" }} />
+                  ) : (
+                    <LabelOffIcon sx={{ fontSize: 18, opacity: 0.4 }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            )}
+            <Tooltip title={visState.title} placement="left">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  handleVisibility(index);
+                  e.stopPropagation();
+                }}
+              >
+                {visState.icon}
+              </IconButton>
+            </Tooltip>
+          </div>
         )
       }
     >
@@ -223,6 +247,9 @@ export default function Sidebar({
   list,
   setList,
   pokemonData,
+  showCollectionTags,
+  tagVisibility,
+  setTagVisibility,
 }) {
   const [text, setText] = useState("");
 
@@ -286,6 +313,13 @@ export default function Sidebar({
     setList(newList);
   };
 
+  const handleToggleTagVisibility = (collectionId) => {
+    setTagVisibility((prev) => ({
+      ...prev,
+      [collectionId]: prev[collectionId] === false ? true : false,
+    }));
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -342,6 +376,9 @@ export default function Sidebar({
                 handleRemove={handleRemove}
                 handleVisibility={handleVisibility}
                 handleRename={handleRename}
+                showCollectionTags={showCollectionTags}
+                tagVisible={tagVisibility[item.id] !== false}
+                onToggleTagVisibility={handleToggleTagVisibility}
               />
             ))}
           </SortableContext>

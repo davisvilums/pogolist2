@@ -6,6 +6,9 @@ import SearchIcon from "@mui/icons-material/Search";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import InputBase from "@mui/material/InputBase";
+import Switch from "@mui/material/Switch";
+import Tooltip from "@mui/material/Tooltip";
+import LabelIcon from "@mui/icons-material/Label";
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -66,7 +69,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 export default function Header(props) {
-  const { open, width, handleDrawerOpen, searchTerm, setSearchTerm } = props;
+  const { open, width, handleDrawerOpen, searchTerm, setSearchTerm, showCollectionTags, setShowCollectionTags } = props;
 
   return (
     <AppBar position="fixed" open={open} width={width}>
@@ -83,7 +86,23 @@ export default function Header(props) {
         <Typography variant="h6" noWrap component="div">
           Personal Pokedex
         </Typography>
-        <Search>
+        <Tooltip title={showCollectionTags ? "Hide collection tags" : "Show collection tags"}>
+          <div style={{ display: "flex", alignItems: "center", color: "white", marginLeft: "auto" }}>
+            <LabelIcon sx={{ fontSize: 20, opacity: showCollectionTags ? 1 : 0.5 }} />
+            <Switch
+              size="small"
+              checked={showCollectionTags}
+              onChange={(e) => setShowCollectionTags(e.target.checked)}
+              color="default"
+              sx={{
+                '& .MuiSwitch-thumb': { backgroundColor: 'white' },
+                '& .MuiSwitch-track': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                '& .Mui-checked + .MuiSwitch-track': { backgroundColor: 'rgba(255,255,255,0.5) !important' },
+              }}
+            />
+          </div>
+        </Tooltip>
+        <Search sx={{ marginLeft: 0 }}>
           <SearchIconWrapper>
             <SearchIcon />
           </SearchIconWrapper>

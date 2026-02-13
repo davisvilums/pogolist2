@@ -50,6 +50,9 @@ export default function Body({
   lastAction,
   handleUndo,
   searchTerm,
+  showCollectionTags,
+  tagVisibility,
+  removePokemonFromCollection,
 }) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
@@ -187,12 +190,23 @@ export default function Body({
           .map((row, index) => {
             const isItemSelected = isSelected(row.id);
 
+            const pokemonCollections = showCollectionTags
+              ? list.filter((c) =>
+                  c.pokemon &&
+                  c.pokemon.includes(row.id) &&
+                  tagVisibility[c.id] !== false
+                )
+              : [];
+
             return (
               <PokemonCard
                 pokemon={row}
                 key={row.name}
                 select={(event) => handleClick(event, row.id)}
                 selected={isItemSelected}
+                collections={pokemonCollections}
+                showCollectionTags={showCollectionTags}
+                removePokemonFromCollection={removePokemonFromCollection}
               />
             );
           })}
