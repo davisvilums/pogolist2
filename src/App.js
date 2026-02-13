@@ -85,6 +85,7 @@ export default function PersistentDrawerLeft() {
     return "";
   });
   const [lastAction, setLastAction] = React.useState(null);
+  const [searchTerm, setSearchTerm] = React.useState("");
 
   React.useEffect(() => {
     async function fetchPokemonData() {
@@ -198,6 +199,8 @@ export default function PersistentDrawerLeft() {
         width={drawerWidth}
         open={open}
         handleDrawerOpen={handleDrawerOpen}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
       />
       <Drawer
         sx={{
@@ -244,6 +247,7 @@ export default function PersistentDrawerLeft() {
             setSelected={updateSelected}
             lastAction={lastAction}
             handleUndo={handleUndo}
+            searchTerm={searchTerm}
           />
         )}
       </Main>

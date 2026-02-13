@@ -49,6 +49,7 @@ export default function Body({
   setSelected,
   lastAction,
   handleUndo,
+  searchTerm,
 }) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
@@ -66,6 +67,12 @@ export default function Body({
 
     // Apply tag/generation filters
     pl = runFilters(pl, filters);
+
+    // Apply search filter
+    if (searchTerm && searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim();
+      pl = pl.filter((item) => item.name.toLowerCase().includes(search));
+    }
 
     // Check for spotlight collection (only one can be active)
     const spotlightCollection = list.find((c) => c.visibility === "spotlight");
@@ -97,7 +104,7 @@ export default function Body({
 
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, data]);
+  }, [filters, list, selected.pokemon, data, searchTerm]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";

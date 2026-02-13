@@ -163,13 +163,32 @@ function SelectedPokemonNames({ list, pokemonData }) {
   // Find the selected collection
   const selectedCollection = list.find((item) => item.selected);
 
-  // Get Pokemon names for the selected collection
+  // Get Pokemon names for the selected collection (only visible ones)
   const getSelectedNames = () => {
     if (!selectedCollection || !selectedCollection.pokemon || !pokemonData) {
       return "";
     }
 
+    // Check for spotlight collection
+    const spotlightCollection = list.find((c) => c.visibility === "spotlight");
+
+    // Build set of hidden Pokemon IDs
+    const hiddenPokemonIds = new Set();
+    list.forEach((collection) => {
+      if (collection.visibility === "hide" && collection.pokemon) {
+        collection.pokemon.forEach((id) => hiddenPokemonIds.add(id));
+      }
+    });
+
     const names = selectedCollection.pokemon
+      .filter((id) => {
+        // If spotlight is active, only show Pokemon that are in the spotlight collection
+        if (spotlightCollection) {
+          return spotlightCollection.pokemon?.includes(id);
+        }
+        // Otherwise, exclude hidden Pokemon
+        return !hiddenPokemonIds.has(id);
+      })
       .map((id) => {
         const pokemon = pokemonData.find((p) => p.id === id);
         return pokemon ? getFirstName(pokemon.name) : null;
@@ -183,13 +202,17 @@ function SelectedPokemonNames({ list, pokemonData }) {
     <Box sx={{ p: 2, pt: 0 }}>
       <TextField
         multiline
-        rows={3}
+        minRows={3}
+        maxRows={12}
         value={getSelectedNames()}
         placeholder="Selected Pokemon names will appear here"
         variant="outlined"
         size="small"
         fullWidth
-        InputProps={{ readOnly: true }}
+        InputProps={{
+          readOnly: true,
+          sx: { resize: "vertical", overflow: "auto" },
+        }}
       />
     </Box>
   );

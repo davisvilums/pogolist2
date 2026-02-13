@@ -66,19 +66,15 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 export default function Header(props) {
-  const open = props.open;
-
-  const drawerOpen = () => {
-    props.handleDrawerOpen();
-  };
+  const { open, width, handleDrawerOpen, searchTerm, setSearchTerm } = props;
 
   return (
-    <AppBar position="fixed" open={open} width={props.width}>
+    <AppBar position="fixed" open={open} width={width}>
       <Toolbar>
         <IconButton
           color="inherit"
           aria-label="open drawer"
-          onClick={drawerOpen}
+          onClick={handleDrawerOpen}
           edge="start"
           sx={{ mr: 2, ...(open && { display: "none" }) }}
         >
@@ -91,7 +87,12 @@ export default function Header(props) {
           <SearchIconWrapper>
             <SearchIcon />
           </SearchIconWrapper>
-          <StyledInputBase placeholder="Search…" inputProps={{ "aria-label": "search" }} />
+          <StyledInputBase
+            placeholder="Search…"
+            inputProps={{ "aria-label": "search" }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </Search>
       </Toolbar>
     </AppBar>
