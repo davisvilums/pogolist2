@@ -53,6 +53,11 @@ export default function Body({
   showCollectionTags,
   tagVisibility,
   removePokemonFromCollection,
+  filterSets,
+  activeFilterSetId,
+  setActiveFilterSetId,
+  activeFilterSetMode,
+  setActiveFilterSetMode,
 }) {
   const [order, setOrder] = React.useState("desc");
   const [orderBy, setOrderBy] = React.useState("cp");
@@ -77,37 +82,53 @@ export default function Body({
       pl = pl.filter((item) => item.name.toLowerCase().includes(search));
     }
 
-    // Check for spotlight collection (only one can be active)
-    const spotlightCollection = list.find((c) => c.visibility === "spotlight");
+    // Apply per-collection visibility (show/hide)
+    const showCols = list.filter((c) => c.visibility === "show");
+    const hideCols = list.filter((c) => c.visibility === "hide");
 
-    if (spotlightCollection) {
-      // Spotlight mode: show only Pokemon in the spotlighted collection
-      const spotlightPokemon = spotlightCollection.pokemon || [];
-      pl = pl.map((item) => {
-        item.show = spotlightPokemon.includes(item.id);
-        return item;
-      });
-    } else {
-      // Normal mode: apply hide filters
-      const hiddenPokemonIds = new Set();
-
-      list.forEach((collection) => {
-        if (collection.visibility === "hide" && collection.pokemon) {
-          collection.pokemon.forEach((id) => hiddenPokemonIds.add(id));
-        }
-      });
-
-      pl = pl.map((item) => {
-        item.show = !hiddenPokemonIds.has(item.id);
-        return item;
-      });
+    if (showCols.length > 0) {
+      const showIds = new Set();
+      showCols.forEach((c) => (c.pokemon || []).forEach((id) => showIds.add(id)));
+      pl = pl.filter((item) => showIds.has(item.id));
+    }
+    if (hideCols.length > 0) {
+      const hideIds = new Set();
+      hideCols.forEach((c) => (c.pokemon || []).forEach((id) => hideIds.add(id)));
+      pl = pl.filter((item) => !hideIds.has(item.id));
     }
 
-    pl = pl.filter((p) => p.show === true);
+    // Apply active filter set
+    const activeFs = filterSets.find((fs) => fs.id === activeFilterSetId);
+    if (activeFs) {
+      const fsShowCols = list.filter((c) => activeFs.filters[c.id] === "show");
+      const fsHideCols = list.filter((c) => activeFs.filters[c.id] === "hide");
+
+      if (fsShowCols.length > 0) {
+        const effectiveInvert = activeFs.invert !== (activeFilterSetMode === "exclude");
+        if (activeFs.mode === "and") {
+          pl = pl.filter((item) => {
+            const inAll = fsShowCols.every((c) => c.pokemon && c.pokemon.includes(item.id));
+            return effectiveInvert ? !inAll : inAll;
+          });
+        } else {
+          const ids = new Set();
+          fsShowCols.forEach((c) => (c.pokemon || []).forEach((id) => ids.add(id)));
+          pl = pl.filter((item) =>
+            effectiveInvert ? !ids.has(item.id) : ids.has(item.id)
+          );
+        }
+      }
+
+      if (fsHideCols.length > 0) {
+        const ids = new Set();
+        fsHideCols.forEach((c) => (c.pokemon || []).forEach((id) => ids.add(id)));
+        pl = pl.filter((item) => !ids.has(item.id));
+      }
+    }
 
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, data, searchTerm]);
+  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -179,6 +200,11 @@ export default function Body({
         toggleFilters={() => setShowFilters(!showfilters)}
         lastAction={lastAction}
         handleUndo={handleUndo}
+        filterSets={filterSets}
+        activeFilterSetId={activeFilterSetId}
+        setActiveFilterSetId={setActiveFilterSetId}
+        activeFilterSetMode={activeFilterSetMode}
+        setActiveFilterSetMode={setActiveFilterSetMode}
       />
       {showfilters && (
         <TagFilters filtersList={filters} setFilters={setFilters} />

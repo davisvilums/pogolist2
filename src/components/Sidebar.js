@@ -8,6 +8,8 @@ import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
 import DragHandleIcon from "@mui/icons-material/DragHandle";
 import {
   DndContext,
@@ -33,29 +35,16 @@ import IconCross from "@mui/icons-material/CancelOutlined";
 import IconEmpty from "@mui/icons-material/RadioButtonUncheckedOutlined";
 import IconFull from "@mui/icons-material/RadioButtonChecked";
 import IconRemove from "@mui/icons-material/RemoveCircleOutline";
-import StarIcon from "@mui/icons-material/Star";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import CircleOutlinedIcon from "@mui/icons-material/CircleOutlined";
+import StarIcon from "@mui/icons-material/Star";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import LabelIcon from "@mui/icons-material/Label";
 import LabelOffIcon from "@mui/icons-material/LabelOff";
-
-// Visibility states: "ignore" | "hide" | "spotlight"
-const visibilityStates = {
-  ignore: {
-    title: "Ignore (click to hide)",
-    icon: <IconEmpty sx={{ opacity: 0.5 }} />,
-    next: "hide"
-  },
-  hide: {
-    title: "Hidden (click to spotlight)",
-    icon: <VisibilityOffIcon color="error" />,
-    next: "spotlight"
-  },
-  spotlight: {
-    title: "Spotlight (click to ignore)",
-    icon: <StarIcon sx={{ color: "#ffc107" }} />,
-    next: "ignore"
-  },
-};
+import DeleteIcon from "@mui/icons-material/Delete";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 
 function SortableItem({
   id,
@@ -64,11 +53,11 @@ function SortableItem({
   edit,
   handleSelect,
   handleRemove,
-  handleVisibility,
   handleRename,
   showCollectionTags,
   tagVisible,
   onToggleTagVisibility,
+  onCycleVisibility,
 }) {
   const {
     attributes,
@@ -86,10 +75,6 @@ function SortableItem({
     zIndex: isDragging ? 1 : 0,
     position: "relative",
   };
-
-  // Get current visibility state (default to "ignore" for backwards compatibility)
-  const currentVisibility = item.visibility || "ignore";
-  const visState = visibilityStates[currentVisibility] || visibilityStates.ignore;
 
   return (
     <ListItem
@@ -131,15 +116,27 @@ function SortableItem({
                 </IconButton>
               </Tooltip>
             )}
-            <Tooltip title={visState.title} placement="left">
+            <Tooltip
+              title={
+                item.visibility === "show" ? "Showing" :
+                item.visibility === "hide" ? "Hiding" : "No filter"
+              }
+              placement="left"
+            >
               <IconButton
                 size="small"
                 onClick={(e) => {
-                  handleVisibility(index);
                   e.stopPropagation();
+                  onCycleVisibility(item.id);
                 }}
               >
-                {visState.icon}
+                {item.visibility === "show" ? (
+                  <StarIcon sx={{ color: "#f9a825" }} />
+                ) : item.visibility === "hide" ? (
+                  <VisibilityOffIcon sx={{ color: "#d32f2f" }} />
+                ) : (
+                  <CircleOutlinedIcon sx={{ opacity: 0.4 }} />
+                )}
               </IconButton>
             </Tooltip>
           </div>
@@ -183,35 +180,46 @@ function getFirstName(name) {
   return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
 }
 
-function SelectedPokemonNames({ list, pokemonData }) {
-  // Find the selected collection
+function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId, activeFilterSetMode }) {
   const selectedCollection = list.find((item) => item.selected);
 
-  // Get Pokemon names for the selected collection (only visible ones)
   const getSelectedNames = () => {
     if (!selectedCollection || !selectedCollection.pokemon || !pokemonData) {
       return "";
     }
 
-    // Check for spotlight collection
-    const spotlightCollection = list.find((c) => c.visibility === "spotlight");
-
-    // Build set of hidden Pokemon IDs
-    const hiddenPokemonIds = new Set();
-    list.forEach((collection) => {
-      if (collection.visibility === "hide" && collection.pokemon) {
-        collection.pokemon.forEach((id) => hiddenPokemonIds.add(id));
-      }
-    });
-
     const names = selectedCollection.pokemon
       .filter((id) => {
-        // If spotlight is active, only show Pokemon that are in the spotlight collection
-        if (spotlightCollection) {
-          return spotlightCollection.pokemon?.includes(id);
+        // Per-collection visibility
+        const visShowCols = list.filter((c) => c.visibility === "show");
+        const visHideCols = list.filter((c) => c.visibility === "hide");
+
+        if (visShowCols.length > 0) {
+          if (!visShowCols.some((c) => c.pokemon && c.pokemon.includes(id))) return false;
         }
-        // Otherwise, exclude hidden Pokemon
-        return !hiddenPokemonIds.has(id);
+        if (visHideCols.some((c) => c.pokemon && c.pokemon.includes(id))) return false;
+
+        // Active filter set
+        const active = filterSets.find((fs) => fs.id === activeFilterSetId);
+        if (!active) return true;
+
+        const showCols = list.filter((c) => active.filters[c.id] === "show");
+        const hideCols = list.filter((c) => active.filters[c.id] === "hide");
+
+        if (hideCols.some((c) => c.pokemon && c.pokemon.includes(id))) return false;
+
+        if (showCols.length > 0) {
+          let inShow;
+          if (active.mode === "and") {
+            inShow = showCols.every((c) => c.pokemon && c.pokemon.includes(id));
+          } else {
+            inShow = showCols.some((c) => c.pokemon && c.pokemon.includes(id));
+          }
+          const effectiveInvert = active.invert !== (activeFilterSetMode === "exclude");
+          return effectiveInvert ? !inShow : inShow;
+        }
+
+        return true;
       })
       .map((id) => {
         const pokemon = pokemonData.find((p) => p.id === id);
@@ -242,6 +250,87 @@ function SelectedPokemonNames({ list, pokemonData }) {
   );
 }
 
+function FilterSetEditor({ filterSet, list, filterSets, setFilterSets }) {
+  const updateFilterSet = (updates) => {
+    setFilterSets((prev) =>
+      prev.map((fs) => (fs.id === filterSet.id ? { ...fs, ...updates } : fs))
+    );
+  };
+
+  const cycleRole = (collectionId) => {
+    const current = filterSet.filters[collectionId] || "ignore";
+    const next = current === "ignore" ? "show" : current === "show" ? "hide" : "ignore";
+    const newFilters = { ...filterSet.filters };
+    if (next === "ignore") {
+      delete newFilters[collectionId];
+    } else {
+      newFilters[collectionId] = next;
+    }
+    updateFilterSet({ filters: newFilters });
+  };
+
+  return (
+    <Box sx={{ pl: 2, pr: 2, pb: 1 }}>
+      {list.map((col) => {
+        const role = filterSet.filters[col.id] || "ignore";
+        return (
+          <Box
+            key={col.id}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              py: 0.25,
+            }}
+          >
+            <Typography variant="body2" noWrap sx={{ flex: 1, mr: 1 }}>
+              {col.text}
+            </Typography>
+            <Tooltip
+              title={role === "ignore" ? "Ignore" : role === "show" ? "Show" : "Hide"}
+              placement="left"
+            >
+              <IconButton size="small" onClick={() => cycleRole(col.id)}>
+                {role === "show" ? (
+                  <FilterAltIcon sx={{ color: "#1976d2" }} />
+                ) : role === "hide" ? (
+                  <VisibilityOffIcon sx={{ color: "#d32f2f" }} />
+                ) : (
+                  <FilterAltOutlinedIcon sx={{ opacity: 0.3 }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        );
+      })}
+      <Box sx={{ display: "flex", gap: 0.5, mt: 1, flexWrap: "wrap", alignItems: "center" }}>
+        <Chip
+          label="OR"
+          size="small"
+          color={filterSet.mode === "or" ? "primary" : "default"}
+          variant={filterSet.mode === "or" ? "filled" : "outlined"}
+          onClick={() => updateFilterSet({ mode: "or" })}
+        />
+        <Chip
+          label="AND"
+          size="small"
+          color={filterSet.mode === "and" ? "primary" : "default"}
+          variant={filterSet.mode === "and" ? "filled" : "outlined"}
+          onClick={() => updateFilterSet({ mode: "and" })}
+        />
+        <Chip
+          label="Invert"
+          size="small"
+          icon={<SwapHorizIcon />}
+          color={filterSet.invert ? "secondary" : "default"}
+          variant={filterSet.invert ? "filled" : "outlined"}
+          onClick={() => updateFilterSet({ invert: !filterSet.invert })}
+        />
+      </Box>
+    </Box>
+  );
+}
+
 export default function Sidebar({
   edit,
   list,
@@ -250,10 +339,18 @@ export default function Sidebar({
   showCollectionTags,
   tagVisibility,
   setTagVisibility,
+  filterSets,
+  setFilterSets,
+  activeFilterSetId,
+  activeFilterSetMode,
+  editingFilterSetId,
+  setEditingFilterSetId,
 }) {
   const [text, setText] = useState("");
+  const [filterSetName, setFilterSetName] = useState("");
 
   const textInput = useRef(null);
+  const filterSetInput = useRef(null);
 
   const handleChange = (event) => {
     setText(event.target.value);
@@ -268,7 +365,6 @@ export default function Sidebar({
       const newList = list.concat({
         id: uuidv4(),
         text: text,
-        visibility: "ignore", // New default state
         selected: false,
         pokemon: [],
       });
@@ -295,21 +391,17 @@ export default function Sidebar({
     newList[index]["text"] = event.target.value;
     setList(newList);
   };
-  const handleVisibility = (index) => {
-    const newList = [...list];
-    const currentVis = newList[index]["visibility"] || "ignore";
-    const nextVis = visibilityStates[currentVis]?.next || "ignore";
 
-    // If setting to spotlight, clear other spotlights first
-    if (nextVis === "spotlight") {
-      newList.forEach((item, i) => {
-        if (i !== index && item.visibility === "spotlight") {
-          item.visibility = "ignore";
-        }
-      });
-    }
-
-    newList[index]["visibility"] = nextVis;
+  const handleCycleVisibility = (collectionId) => {
+    const newList = list.map((item) => {
+      if (item.id === collectionId) {
+        const next =
+          item.visibility === "ignore" ? "show" :
+          item.visibility === "show" ? "hide" : "ignore";
+        return { ...item, visibility: next };
+      }
+      return item;
+    });
     setList(newList);
   };
 
@@ -320,10 +412,36 @@ export default function Sidebar({
     }));
   };
 
+  const handleAddFilterSet = () => {
+    if (filterSetName.trim() === "") return;
+    const newFs = {
+      id: uuidv4(),
+      name: filterSetName.trim(),
+      filters: {},
+      mode: "or",
+      invert: false,
+    };
+    setFilterSets((prev) => [...prev, newFs]);
+    setFilterSetName("");
+    setEditingFilterSetId(newFs.id);
+    if (filterSetInput.current) filterSetInput.current.focus();
+  };
+
+  const handleDeleteFilterSet = (fsId) => {
+    setFilterSets((prev) => prev.filter((fs) => fs.id !== fsId));
+    if (editingFilterSetId === fsId) setEditingFilterSetId(null);
+  };
+
+  const handleRenameFilterSet = (fsId, newName) => {
+    setFilterSets((prev) =>
+      prev.map((fs) => (fs.id === fsId ? { ...fs, name: newName } : fs))
+    );
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px movement before activating drag
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -331,7 +449,6 @@ export default function Sidebar({
     })
   );
 
-  // Ensure all items have stable IDs (migration for existing data)
   const getItemId = (item, index) => item.id || `legacy-${index}`;
 
   const handleDragEnd = (event) => {
@@ -340,7 +457,6 @@ export default function Sidebar({
       const oldIndex = list.findIndex((item, i) => getItemId(item, i) === active.id);
       const newIndex = list.findIndex((item, i) => getItemId(item, i) === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
-        // Migrate items to have stable IDs if they don't have them
         const newList = arrayMove(list, oldIndex, newIndex).map((item) => {
           if (!item.id) {
             return { ...item, id: uuidv4() };
@@ -374,11 +490,11 @@ export default function Sidebar({
                 edit={edit}
                 handleSelect={handleSelect}
                 handleRemove={handleRemove}
-                handleVisibility={handleVisibility}
                 handleRename={handleRename}
                 showCollectionTags={showCollectionTags}
                 tagVisible={tagVisibility[item.id] !== false}
                 onToggleTagVisibility={handleToggleTagVisibility}
+                onCycleVisibility={handleCycleVisibility}
               />
             ))}
           </SortableContext>
@@ -406,16 +522,109 @@ export default function Sidebar({
           </IconButton>
         </ListItem>
       </List>
+
+      <Divider />
+      <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+        <Typography variant="overline" color="text.secondary">
+          Filter Sets
+        </Typography>
+      </Box>
+
+      <List dense disablePadding>
+        {filterSets.map((fs) => (
+          <Box key={fs.id}>
+            <ListItem
+              button
+              selected={editingFilterSetId === fs.id}
+              onClick={() =>
+                setEditingFilterSetId(editingFilterSetId === fs.id ? null : fs.id)
+              }
+              secondaryAction={
+                editingFilterSetId === fs.id ? (
+                  <Tooltip title="Delete filter set" placement="left">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFilterSet(fs.id);
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" color="error" />
+                    </IconButton>
+                  </Tooltip>
+                ) : activeFilterSetId === fs.id ? (
+                  <Chip
+                    label={activeFilterSetMode}
+                    size="small"
+                    color={activeFilterSetMode === "show" ? "primary" : "error"}
+                    sx={{ height: 20, fontSize: 11 }}
+                  />
+                ) : null
+              }
+            >
+              {editingFilterSetId === fs.id ? (
+                <TextField
+                  hiddenLabel
+                  variant="standard"
+                  value={fs.name}
+                  size="small"
+                  fullWidth
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => handleRenameFilterSet(fs.id, e.target.value)}
+                />
+              ) : (
+                <ListItemText primary={fs.name} />
+              )}
+            </ListItem>
+            {editingFilterSetId === fs.id && (
+              <FilterSetEditor
+                filterSet={fs}
+                list={list}
+                filterSets={filterSets}
+                setFilterSets={setFilterSets}
+              />
+            )}
+          </Box>
+        ))}
+      </List>
+
+      <Box sx={{ px: 2, pb: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <TextField
+            hiddenLabel
+            placeholder="New Filter Set"
+            variant="filled"
+            value={filterSetName}
+            size="small"
+            fullWidth
+            sx={{ mr: 1 }}
+            onChange={(e) => setFilterSetName(e.target.value)}
+            inputRef={filterSetInput}
+            onKeyPress={(e) => {
+              if (e.key === "Enter") handleAddFilterSet();
+            }}
+          />
+          <IconButton
+            aria-label="Add filter set"
+            size="small"
+            onClick={handleAddFilterSet}
+            disabled={!filterSetName.trim()}
+          >
+            <IconPlus color={filterSetName.trim() ? "primary" : "default"} />
+          </IconButton>
+        </Box>
+      </Box>
+
       <Divider />
       <DataImportExport />
-      <SelectedPokemonNames list={list} pokemonData={pokemonData} />
+      <SelectedPokemonNames
+        list={list}
+        pokemonData={pokemonData}
+        filterSets={filterSets}
+        activeFilterSetId={activeFilterSetId}
+        activeFilterSetMode={activeFilterSetMode}
+      />
       <List>
-        {/* {["All mail", "Trash", "Spam"].map((text, index) => (
-          <ListItem button key={text}>
-            <ListItemIcon>{index % 2 === 0 ? <InboxIcon /> : <MailIcon />}</ListItemIcon>
-            <ListItemText primary={text} />
-          </ListItem>
-        ))} */}
       </List>
     </>
   );

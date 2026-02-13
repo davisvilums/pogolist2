@@ -10,6 +10,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
+import Chip from "@mui/material/Chip";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { styled } from "@mui/material/styles";
@@ -95,6 +96,11 @@ export default function ToolbarPoke(props) {
     title,
     lastAction,
     handleUndo,
+    filterSets,
+    activeFilterSetId,
+    setActiveFilterSetId,
+    activeFilterSetMode,
+    setActiveFilterSetMode,
   } = props;
 
   return (
@@ -138,6 +144,34 @@ export default function ToolbarPoke(props) {
           {rowCount}
         </Typography>
       </Box>
+      {filterSets && filterSets.length > 0 && (
+        <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mx: 1 }}>
+          {filterSets.map((fs) => {
+            const isActive = activeFilterSetId === fs.id;
+            const mode = isActive ? activeFilterSetMode : null;
+            return (
+              <Chip
+                key={fs.id}
+                label={fs.name}
+                size="small"
+                color={mode === "show" ? "primary" : mode === "exclude" ? "error" : "default"}
+                variant={isActive ? "filled" : "outlined"}
+                onClick={() => {
+                  if (!isActive) {
+                    setActiveFilterSetId(fs.id);
+                    setActiveFilterSetMode("show");
+                  } else if (mode === "show") {
+                    setActiveFilterSetMode("exclude");
+                  } else {
+                    setActiveFilterSetId(null);
+                    setActiveFilterSetMode("show");
+                  }
+                }}
+              />
+            );
+          })}
+        </Box>
+      )}
       <Box
         sx={{
           ml: "auto",

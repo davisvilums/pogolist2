@@ -51,7 +51,6 @@ const listD = [
     id: "default-collection",
     text: "Test Collection",
     selected: true,
-    visibility: "ignore", // "ignore" | "hide" | "spotlight"
     pokemon: [289, 248, 468, 473, 149, 409, 464, 609, 612],
   },
 ];
@@ -67,10 +66,7 @@ export default function PersistentDrawerLeft() {
     return stored.map((item) => ({
       ...item,
       id: item.id || uuidv4(), // Add unique ID if missing
-      visibility:
-        typeof item.visibility === "string"
-          ? item.visibility
-          : "ignore", // Convert old boolean/number to "ignore"
+      visibility: item.visibility || "ignore",
     }));
   });
   const [selected, setSelected] = React.useState([]);
@@ -92,6 +88,16 @@ export default function PersistentDrawerLeft() {
   const [tagVisibility, setTagVisibility] = React.useState(() => {
     return JSON.parse(localStorage.getItem("tagVisibility")) || {};
   });
+  const [filterSets, setFilterSets] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("filterSets")) || [];
+  });
+  const [activeFilterSetId, setActiveFilterSetId] = React.useState(() => {
+    return localStorage.getItem("activeFilterSetId") || null;
+  });
+  const [activeFilterSetMode, setActiveFilterSetMode] = React.useState(() => {
+    return localStorage.getItem("activeFilterSetMode") || "show";
+  });
+  const [editingFilterSetId, setEditingFilterSetId] = React.useState(null);
 
   React.useEffect(() => {
     async function fetchPokemonData() {
@@ -210,6 +216,22 @@ export default function PersistentDrawerLeft() {
   }, [tagVisibility]);
 
   React.useEffect(() => {
+    localStorage.setItem("filterSets", JSON.stringify(filterSets));
+  }, [filterSets]);
+
+  React.useEffect(() => {
+    if (activeFilterSetId === null) {
+      localStorage.removeItem("activeFilterSetId");
+    } else {
+      localStorage.setItem("activeFilterSetId", activeFilterSetId);
+    }
+  }, [activeFilterSetId]);
+
+  React.useEffect(() => {
+    localStorage.setItem("activeFilterSetMode", activeFilterSetMode);
+  }, [activeFilterSetMode]);
+
+  React.useEffect(() => {
     let obj = list.find((o) => o.selected === true);
     if (obj) {
       setSelected(obj);
@@ -217,6 +239,21 @@ export default function PersistentDrawerLeft() {
       setSelected({});
     }
     localStorage.setItem("collection", JSON.stringify(list));
+
+    // Clean up stale collection references from filter sets when collections are deleted
+    const listIds = new Set(list.map((c) => c.id));
+    setFilterSets((prev) => {
+      const cleaned = prev.map((fs) => {
+        const newFilters = {};
+        for (const [colId, role] of Object.entries(fs.filters)) {
+          if (listIds.has(colId)) newFilters[colId] = role;
+        }
+        return Object.keys(newFilters).length !== Object.keys(fs.filters).length
+          ? { ...fs, filters: newFilters }
+          : fs;
+      });
+      return JSON.stringify(cleaned) !== JSON.stringify(prev) ? cleaned : prev;
+    });
   }, [list]);
 
   return (
@@ -267,6 +304,12 @@ export default function PersistentDrawerLeft() {
           showCollectionTags={showCollectionTags}
           tagVisibility={tagVisibility}
           setTagVisibility={setTagVisibility}
+          filterSets={filterSets}
+          setFilterSets={setFilterSets}
+          activeFilterSetId={activeFilterSetId}
+          activeFilterSetMode={activeFilterSetMode}
+          editingFilterSetId={editingFilterSetId}
+          setEditingFilterSetId={setEditingFilterSetId}
         />
       </Drawer>
       <Main open={open} width={drawerWidth}>
@@ -283,6 +326,11 @@ export default function PersistentDrawerLeft() {
             showCollectionTags={showCollectionTags}
             tagVisibility={tagVisibility}
             removePokemonFromCollection={removePokemonFromCollection}
+            filterSets={filterSets}
+            activeFilterSetId={activeFilterSetId}
+            setActiveFilterSetId={setActiveFilterSetId}
+            activeFilterSetMode={activeFilterSetMode}
+            setActiveFilterSetMode={setActiveFilterSetMode}
           />
         )}
       </Main>
