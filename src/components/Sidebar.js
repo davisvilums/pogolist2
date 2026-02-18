@@ -227,7 +227,7 @@ function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId
       })
       .filter(Boolean);
 
-    return names.join(", ");
+    return names.sort((a, b) => a.localeCompare(b)).join(", ");
   };
 
   return (

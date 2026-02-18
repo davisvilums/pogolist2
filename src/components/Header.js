@@ -3,6 +3,7 @@ import MuiAppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import InputBase from "@mui/material/InputBase";
@@ -145,7 +146,24 @@ export default function Header(props) {
               inputProps={{ "aria-label": "search" }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ "& .MuiInputBase-input": { paddingRight: searchTerm ? "32px" : undefined } }}
             />
+            {searchTerm && (
+              <IconButton
+                size="small"
+                onClick={() => setSearchTerm("")}
+                sx={{
+                  position: "absolute",
+                  right: 4,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "inherit",
+                  padding: "4px",
+                }}
+              >
+                <ClearIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            )}
           </Search>
         </div>
       </Toolbar>
