@@ -44,6 +44,12 @@ const headCells = [
     label: "Order",
   },
   {
+    id: "familyOrder",
+    numeric: true,
+    disablePadding: false,
+    label: "Family",
+  },
+  {
     id: "id",
     numeric: true,
     disablePadding: false,

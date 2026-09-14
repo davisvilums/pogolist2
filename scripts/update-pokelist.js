@@ -156,8 +156,12 @@ async function main() {
 
     const pokeList = [];
     const includeForms = [412, 413, 421, 422, 423, 585, 586, 666, 669, 670, 671, 676];
+    // Forms with no usable sprite: cosplay Pikachus and the Let's Go starters
+    const excludeIds = [10080, 10081, 10082, 10083, 10084, 10085, 10158, 10159];
 
     for (const pokemon of pokemons) {
+      if (excludeIds.includes(pokemon.id)) continue;
+
       const pok = {
         cp: calculateCP(pokemon.pokemon_v2_pokemonstats),
         name: pokemon.name,
@@ -239,6 +243,7 @@ async function main() {
     fs.writeFileSync(outputPath, JSON.stringify({ pokelist: pokeList }, null, 2));
 
     console.log(`\nGenerated pokelist.json with ${pokeList.length} Pokemon`);
+    console.log('Run scripts/add-family-order.js next to restore the Family sort order');
 
     // Stats
     const maxId = Math.max(...pokeList.filter(p => p.id < 10000).map(p => p.id));

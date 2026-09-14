@@ -16,7 +16,7 @@ import Tooltip from "@mui/material/Tooltip";
 import GetDataGrahp from "./data/GetDataGrahp";
 
 // Data version - increment this when pokelist.json structure changes
-const DATA_VERSION = 8;
+const DATA_VERSION = 10;
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
