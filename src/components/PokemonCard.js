@@ -113,7 +113,13 @@ const CollectionTag = styled("span")`
   }
 `;
 
-function PokemonCard({ pokemon, selected, select, collections, showCollectionTags, removePokemonFromCollection }) {
+// PokeAPI keeps shiny sprites in a "shiny" folder next to the regular ones
+function getShinySprite(sprite) {
+  if (!sprite || !sprite.includes("PokeAPI/sprites")) return sprite;
+  return sprite.replace(/\/([^/]+\.png)$/, "/shiny/$1");
+}
+
+function PokemonCard({ pokemon, selected, select, collections, showCollectionTags, removePokemonFromCollection, showShiny }) {
   var TitleSize = "15px";
 
   if (pokemon.name.length > 15) {
@@ -132,7 +138,16 @@ function PokemonCard({ pokemon, selected, select, collections, showCollectionTag
         {selected ? <Check color="primary" /> : "G" + pokemon.gen}
       </PokemonGeneration>
       <PokemonSpriteWrap>
-        <img src={pokemon.sprite} alt="" />
+        <img
+          src={showShiny ? getShinySprite(pokemon.sprite) : pokemon.sprite}
+          alt=""
+          onError={(e) => {
+            // Fall back to the regular sprite when no shiny version exists
+            if (showShiny && e.currentTarget.src !== pokemon.sprite) {
+              e.currentTarget.src = pokemon.sprite;
+            }
+          }}
+        />
       </PokemonSpriteWrap>
 
       <PokemonMeta>

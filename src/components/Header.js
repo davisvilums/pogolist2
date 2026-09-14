@@ -10,6 +10,7 @@ import InputBase from "@mui/material/InputBase";
 import Switch from "@mui/material/Switch";
 import Tooltip from "@mui/material/Tooltip";
 import LabelIcon from "@mui/icons-material/Label";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -78,6 +79,8 @@ export default function Header(props) {
     setSearchTerm,
     showCollectionTags,
     setShowCollectionTags,
+    showShiny,
+    setShowShiny,
   } = props;
 
   return (
@@ -102,6 +105,22 @@ export default function Header(props) {
             marginLeft: "auto",
           }}
         >
+          <Tooltip title={showShiny ? "Show regular sprites" : "Show shiny sprites"}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle shiny sprites"
+              aria-pressed={showShiny}
+              onClick={() => setShowShiny(!showShiny)}
+              sx={{ mr: 1 }}
+            >
+              <AutoAwesomeIcon
+                sx={{
+                  opacity: showShiny ? 1 : 0.5,
+                  color: showShiny ? "#ffd54f" : "inherit",
+                }}
+              />
+            </IconButton>
+          </Tooltip>
           <Tooltip
             title={
               showCollectionTags

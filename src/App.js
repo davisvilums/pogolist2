@@ -85,6 +85,9 @@ export default function PersistentDrawerLeft() {
   const [showCollectionTags, setShowCollectionTags] = React.useState(() => {
     return JSON.parse(localStorage.getItem("showCollectionTags")) || false;
   });
+  const [showShiny, setShowShiny] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("showShiny")) || false;
+  });
   const [tagVisibility, setTagVisibility] = React.useState(() => {
     return JSON.parse(localStorage.getItem("tagVisibility")) || {};
   });
@@ -212,6 +215,10 @@ export default function PersistentDrawerLeft() {
   }, [showCollectionTags]);
 
   React.useEffect(() => {
+    localStorage.setItem("showShiny", JSON.stringify(showShiny));
+  }, [showShiny]);
+
+  React.useEffect(() => {
     localStorage.setItem("tagVisibility", JSON.stringify(tagVisibility));
   }, [tagVisibility]);
 
@@ -267,6 +274,8 @@ export default function PersistentDrawerLeft() {
         setSearchTerm={setSearchTerm}
         showCollectionTags={showCollectionTags}
         setShowCollectionTags={setShowCollectionTags}
+        showShiny={showShiny}
+        setShowShiny={setShowShiny}
       />
       <Drawer
         sx={{
@@ -324,6 +333,7 @@ export default function PersistentDrawerLeft() {
             handleUndo={handleUndo}
             searchTerm={searchTerm}
             showCollectionTags={showCollectionTags}
+            showShiny={showShiny}
             tagVisibility={tagVisibility}
             removePokemonFromCollection={removePokemonFromCollection}
             filterSets={filterSets}
