@@ -51,6 +51,7 @@ export default function Body({
   handleUndo,
   searchTerm,
   showCollectionTags,
+  showShiny,
   tagVisibility,
   removePokemonFromCollection,
   filterSets,
@@ -233,6 +234,7 @@ export default function Body({
                 collections={pokemonCollections}
                 showCollectionTags={showCollectionTags}
                 removePokemonFromCollection={removePokemonFromCollection}
+                showShiny={showShiny}
               />
             );
           })}
