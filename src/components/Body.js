@@ -2,7 +2,8 @@ import * as React from "react";
 import Paper from "@mui/material/Paper";
 import { styled } from "@mui/material/styles";
 import PokemonCard from "./PokemonCard";
-import { TagFilters, filtersList, runFilters } from "./TagFilters";
+import { TagFilters, EvolutionFilters, filtersList, runFilters } from "./TagFilters";
+import { buildAncestors, getCollectionHiddenIds, applyEvolutionRules } from "../data/evolution";
 import Toolbar from "./Toolbar";
 import Pagination from "./Pagination";
 
@@ -58,9 +59,16 @@ export default function Body({
   setActiveFilterSetId,
   activeFilterSetMode,
   setActiveFilterSetMode,
+  evolutionRules,
+  setEvolutionRules,
+  setVisiblePokemonIds,
 }) {
-  const [order, setOrder] = React.useState("desc");
-  const [orderBy, setOrderBy] = React.useState("cp");
+  const [order, setOrder] = React.useState(() => {
+    return localStorage.getItem("sortOrder") || "desc";
+  });
+  const [orderBy, setOrderBy] = React.useState(() => {
+    return localStorage.getItem("sortOrderBy") || "cp";
+  });
   const [page, setPage] = React.useState(0);
   const [itemsPerPage, setItemsPerPage] = React.useState(50);
   const [showfilters, setShowFilters] = React.useState(false);
@@ -68,6 +76,17 @@ export default function Body({
   const [filters, setFilters] = React.useState(filtersList);
   const [rows, setRows] = React.useState(data);
   const ref = React.useRef(null);
+  const ancestors = React.useMemo(() => buildAncestors(data), [data]);
+
+  // Share what's on screen (all pages) with the sidebar name list
+  React.useEffect(() => {
+    if (setVisiblePokemonIds) setVisiblePokemonIds(rows.map((p) => p.id));
+  }, [rows, setVisiblePokemonIds]);
+
+  React.useEffect(() => {
+    localStorage.setItem("sortOrder", order);
+    localStorage.setItem("sortOrderBy", orderBy);
+  }, [order, orderBy]);
 
   React.useMemo(() => {
     if (!rows) return "";
@@ -126,9 +145,16 @@ export default function Body({
       }
     }
 
+    // Hide evolutions based on the evolution rules
+    const hiddenIds = getCollectionHiddenIds(list, filterSets, activeFilterSetId, activeFilterSetMode);
+    const visibleIds = new Set(
+      applyEvolutionRules(pl.map((p) => p.id), evolutionRules, ancestors, hiddenIds)
+    );
+    pl = pl.filter((p) => visibleIds.has(p.id));
+
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode]);
+  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, ancestors]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -207,7 +233,10 @@ export default function Body({
         setActiveFilterSetMode={setActiveFilterSetMode}
       />
       {showfilters && (
-        <TagFilters filtersList={filters} setFilters={setFilters} />
+        <>
+          <TagFilters filtersList={filters} setFilters={setFilters} />
+          <EvolutionFilters rules={evolutionRules} setRules={setEvolutionRules} />
+        </>
       )}
 
       <PokemonWrap ref={ref}>

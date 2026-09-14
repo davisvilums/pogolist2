@@ -14,9 +14,10 @@ import Sidebar from "./components/Sidebar";
 import Body from "./components/Body";
 import Tooltip from "@mui/material/Tooltip";
 import GetDataGrahp from "./data/GetDataGrahp";
+import { defaultEvolutionRules } from "./data/evolution";
 
 // Data version - increment this when pokelist.json structure changes
-const DATA_VERSION = 10;
+const DATA_VERSION = 16;
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
@@ -87,6 +88,13 @@ export default function PersistentDrawerLeft() {
   });
   const [tagVisibility, setTagVisibility] = React.useState(() => {
     return JSON.parse(localStorage.getItem("tagVisibility")) || {};
+  });
+  const [visiblePokemonIds, setVisiblePokemonIds] = React.useState([]);
+  const [evolutionRules, setEvolutionRules] = React.useState(() => {
+    return {
+      ...defaultEvolutionRules,
+      ...JSON.parse(localStorage.getItem("evolutionRules")),
+    };
   });
   const [filterSets, setFilterSets] = React.useState(() => {
     return JSON.parse(localStorage.getItem("filterSets")) || [];
@@ -216,6 +224,10 @@ export default function PersistentDrawerLeft() {
   }, [tagVisibility]);
 
   React.useEffect(() => {
+    localStorage.setItem("evolutionRules", JSON.stringify(evolutionRules));
+  }, [evolutionRules]);
+
+  React.useEffect(() => {
     localStorage.setItem("filterSets", JSON.stringify(filterSets));
   }, [filterSets]);
 
@@ -310,6 +322,8 @@ export default function PersistentDrawerLeft() {
           activeFilterSetMode={activeFilterSetMode}
           editingFilterSetId={editingFilterSetId}
           setEditingFilterSetId={setEditingFilterSetId}
+          evolutionRules={evolutionRules}
+          visiblePokemonIds={visiblePokemonIds}
         />
       </Drawer>
       <Main open={open} width={drawerWidth}>
@@ -331,6 +345,9 @@ export default function PersistentDrawerLeft() {
             setActiveFilterSetId={setActiveFilterSetId}
             activeFilterSetMode={activeFilterSetMode}
             setActiveFilterSetMode={setActiveFilterSetMode}
+            evolutionRules={evolutionRules}
+            setEvolutionRules={setEvolutionRules}
+            setVisiblePokemonIds={setVisiblePokemonIds}
           />
         )}
       </Main>

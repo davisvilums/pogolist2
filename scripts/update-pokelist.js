@@ -156,8 +156,12 @@ async function main() {
 
     const pokeList = [];
     const includeForms = [412, 413, 421, 422, 423, 585, 586, 666, 669, 670, 671, 676];
-    // Forms with no usable sprite: cosplay Pikachus and the Let's Go starters
-    const excludeIds = [10080, 10081, 10082, 10083, 10084, 10085, 10158, 10159];
+    // Unwanted forms: cosplay and cap Pikachus, and the Let's Go starters
+    const excludeIds = [
+      10080, 10081, 10082, 10083, 10084, 10085, // cosplay Pikachus
+      10094, 10095, 10096, 10097, 10098, 10099, 10148, 10160, // cap Pikachus
+      10158, 10159, // Let's Go Pikachu and Eevee
+    ];
 
     for (const pokemon of pokemons) {
       if (excludeIds.includes(pokemon.id)) continue;
@@ -181,6 +185,7 @@ async function main() {
       if (pokemon.pokemon_v2_pokemonspecy?.is_mythical) pok.tags.push('mythical');
       if (pokemon.name.includes('-mega')) pok.tags.push('mega');
       if (pokemon.name.includes('-gmax')) pok.tags.push('gmax');
+      if (pokemon.name.includes('-totem')) pok.tags.push('totem');
 
       // Paradox Legendaries (not marked as legendary in PokeAPI)
       const paradoxLegendaries = [1009, 1010, 1020, 1021, 1022, 1023];
@@ -264,4 +269,6 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { calculateCP };

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -29,6 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import DataImportExport from "./DataImportExport";
+import { buildAncestors, getCollectionHiddenIds, applyEvolutionRules } from "../data/evolution";
 
 import IconPlus from "@mui/icons-material/ControlPoint";
 import IconCross from "@mui/icons-material/CancelOutlined";
@@ -180,15 +181,39 @@ function getFirstName(name) {
   return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
 }
 
-function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId, activeFilterSetMode }) {
+// Whether the selected collection is currently hidden, so the grid shows what is
+// missing from it (collection set to "hide", or hidden/excluded by the filter set)
+function isCollectionHidden(collection, filterSets, activeFilterSetId, activeFilterSetMode) {
+  if (collection.visibility === "hide") return true;
+  const active = filterSets.find((fs) => fs.id === activeFilterSetId);
+  if (!active) return false;
+  const role = active.filters[collection.id];
+  const inverted = active.invert !== (activeFilterSetMode === "exclude");
+  return role === "hide" || (role === "show" && inverted);
+}
+
+const toNameList = (ids, pokemonData) => {
+  const byId = new Map(pokemonData.map((p) => [p.id, p]));
+  const names = ids.map((id) => byId.get(id)).filter(Boolean).map((p) => getFirstName(p.name));
+  return [...new Set(names)].sort((a, b) => a.localeCompare(b)).join(", ");
+};
+
+function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, visiblePokemonIds }) {
   const selectedCollection = list.find((item) => item.selected);
+  const ancestors = useMemo(() => buildAncestors(pokemonData), [pokemonData]);
+  const showOnScreen =
+    selectedCollection &&
+    isCollectionHidden(selectedCollection, filterSets, activeFilterSetId, activeFilterSetMode);
 
   const getSelectedNames = () => {
     if (!selectedCollection || !selectedCollection.pokemon || !pokemonData) {
       return "";
     }
 
-    const names = selectedCollection.pokemon
+    // The selected collection is hidden: list what's on screen instead
+    if (showOnScreen) return toNameList(visiblePokemonIds || [], pokemonData);
+
+    const visibleIds = selectedCollection.pokemon
       .filter((id) => {
         // Per-collection visibility
         const visShowCols = list.filter((c) => c.visibility === "show");
@@ -220,18 +245,22 @@ function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId
         }
 
         return true;
-      })
-      .map((id) => {
-        const pokemon = pokemonData.find((p) => p.id === id);
-        return pokemon ? getFirstName(pokemon.name) : null;
-      })
-      .filter(Boolean);
+      });
 
-    return names.sort((a, b) => a.localeCompare(b)).join(", ");
+    const hiddenIds = getCollectionHiddenIds(list, filterSets, activeFilterSetId, activeFilterSetMode);
+    return toNameList(
+      applyEvolutionRules(visibleIds, evolutionRules, ancestors, hiddenIds),
+      pokemonData
+    );
   };
 
   return (
     <Box sx={{ p: 2, pt: 0 }}>
+      {showOnScreen && (
+        <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
+          "{selectedCollection.text}" is hidden, so this lists the Pokémon on screen
+        </Typography>
+      )}
       <TextField
         multiline
         minRows={3}
@@ -345,6 +374,8 @@ export default function Sidebar({
   activeFilterSetMode,
   editingFilterSetId,
   setEditingFilterSetId,
+  evolutionRules,
+  visiblePokemonIds,
 }) {
   const [text, setText] = useState("");
   const [filterSetName, setFilterSetName] = useState("");
@@ -623,6 +654,8 @@ export default function Sidebar({
         filterSets={filterSets}
         activeFilterSetId={activeFilterSetId}
         activeFilterSetMode={activeFilterSetMode}
+        evolutionRules={evolutionRules}
+        visiblePokemonIds={visiblePokemonIds}
       />
       <List>
       </List>

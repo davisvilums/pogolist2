@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
+import Tooltip from "@mui/material/Tooltip";
 
 const defaultFilters = {
   released: true,
@@ -12,6 +13,7 @@ const defaultFilters = {
   mega: false,
   baby: true,
   gmax: false,
+  totem: false,
   g1: true,
   g2: true,
   g3: true,
@@ -46,6 +48,8 @@ const runFilters = (pl, filters) => {
       pl = pl.filter((p) => p.tags && !p.tags.includes("mega"));
     if (!filters["gmax"])
       pl = pl.filter((p) => p.tags && !p.tags.includes("gmax"));
+    if (!filters["totem"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("totem"));
     if (!filters["legendary"])
       pl = pl.filter((p) => p.tags && !p.tags.includes("legendary"));
     if (!filters["mythical"])
@@ -112,4 +116,41 @@ const TagFilters = ({ filtersList, setFilters }) => {
     </Box>
   );
 };
-export { filtersList, TagFilters, runFilters };
+const evolutionFilterOptions = [
+  {
+    key: "hideEvolutionsOfHidden",
+    label: "hide evolutions of hidden",
+    tooltip: "Also hide Pokémon that evolve from a Pokémon hidden by a collection",
+  },
+  {
+    key: "lowestStageOnly",
+    label: "lowest stage only",
+    tooltip: "When a Pokémon and its evolution are both shown, only show the earlier stage",
+  },
+];
+
+const EvolutionFilters = ({ rules, setRules }) => (
+  <Box
+    sx={{
+      display: "flex",
+      justifyContent: "center",
+      flexWrap: "wrap",
+      pb: "2px",
+    }}
+  >
+    {evolutionFilterOptions.map(({ key, label, tooltip }) => (
+      <Tooltip key={key} title={tooltip}>
+        <Chip
+          label={label}
+          clickable
+          variant={rules[key] ? "filled" : "outlined"}
+          color={rules[key] ? "secondary" : "default"}
+          onClick={() => setRules({ ...rules, [key]: !rules[key] })}
+          sx={{ margin: "0 2px 5px" }}
+        />
+      </Tooltip>
+    ))}
+  </Box>
+);
+
+export { filtersList, TagFilters, EvolutionFilters, runFilters };
