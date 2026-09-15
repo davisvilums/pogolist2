@@ -53,6 +53,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import AddIcon from "@mui/icons-material/Add";
 
+// Tooltips for the small icons in a collection row: shown above the icon so they
+// don't cover the neighbouring button, and they never block clicks
+const rowTooltipProps = { placement: "top", disableInteractive: true, enterDelay: 600 };
+
 function SortableItem({
   id,
   item,
@@ -108,7 +112,7 @@ function SortableItem({
         ) : (
           <div style={{ display: "flex", alignItems: "center" }}>
             {showCollectionTags && (
-              <Tooltip title={tagVisible ? "Hide tag" : "Show tag"} placement="left">
+              <Tooltip title={tagVisible ? "Hide tag" : "Show tag"} {...rowTooltipProps}>
                 <IconButton
                   size="small"
                   onClick={(e) => {
@@ -128,10 +132,10 @@ function SortableItem({
               <Tooltip
                 title={
                   item.related
-                    ? "Related Pokémon included (what these can evolve into)"
-                    : "Include related Pokémon (what these can evolve into)"
+                    ? "Evolutions included"
+                    : "Include evolutions"
                 }
-                placement="left"
+                {...rowTooltipProps}
               >
                 <IconButton
                   size="small"
@@ -157,7 +161,7 @@ function SortableItem({
                 item.visibility === "show" ? "Showing" :
                 item.visibility === "hide" ? "Hiding" : "No filter"
               }
-              placement="left"
+              {...rowTooltipProps}
             >
               <IconButton
                 size="small"

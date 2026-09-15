@@ -149,7 +149,7 @@ export default function Body({
     let pl = data;
 
     // Apply tag/generation filters
-    pl = runFilters(pl, filters);
+    pl = runFilters(pl, filters, showShiny);
 
     // Apply search filter
     if (searchTerm && searchTerm.trim()) {
@@ -207,7 +207,7 @@ export default function Body({
 
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, ancestors, descendants]);
+  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, ancestors, descendants, showShiny]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";

@@ -46,7 +46,9 @@ const getStoredFilters = () => {
 
 const filtersList = getStoredFilters();
 
-const runFilters = (pl, filters) => {
+// With shiny sprites on, "released"/"unreleased" refer to the shiny being out
+const runFilters = (pl, filters, showShiny) => {
+  const isReleased = (p) => (showShiny ? p.shinyReleased : p.released);
   // console.log(pl, filters);
   if (filters) {
     if (!filters["normal"]) pl = pl.filter((p) => p.tags && p.tags.length);
@@ -69,8 +71,8 @@ const runFilters = (pl, filters) => {
       pl = pl.filter((p) => p.tags && !p.tags.includes("ultra"));
     if (!filters["baby"])
       pl = pl.filter((p) => p.tags && !p.tags.includes("baby"));
-    if (!filters["unreleased"]) pl = pl.filter((p) => p.released);
-    if (!filters["released"]) pl = pl.filter((p) => !p.released);
+    if (!filters["unreleased"]) pl = pl.filter((p) => isReleased(p));
+    if (!filters["released"]) pl = pl.filter((p) => !isReleased(p));
     if (!filters["g1"]) pl = pl.filter((p) => p.gen !== 1);
     if (!filters["g2"]) pl = pl.filter((p) => p.gen !== 2);
     if (!filters["g3"]) pl = pl.filter((p) => p.gen !== 3);

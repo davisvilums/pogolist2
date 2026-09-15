@@ -204,9 +204,18 @@ function linkEvolutions(pokelist, speciesOf, species) {
   for (const entry of pokelist) {
     const s = speciesById.get(speciesOf.get(entry));
     if (!s) continue;
+    if (entry.costume) {
+      // Costumes can't evolve and aren't a form other entries evolve from
+      delete entry.evolvesFrom;
+      continue;
+    }
     const suffix = entry.name === s.name ? '' : entry.name.replace(`${s.name}-`, '');
     const item = { entry, species: s, suffix, special: SPECIAL_FORM.test(suffix) };
     info.set(entry, item);
+    // National dex number and form name, used to match Pokemon GO availability data
+    entry.dex = s.id;
+    if (suffix) entry.form = suffix;
+    else delete entry.form;
     if (!bySpecies.has(s.id)) bySpecies.set(s.id, []);
     bySpecies.get(s.id).push(item);
   }
@@ -242,6 +251,7 @@ function linkEvolutions(pokelist, speciesOf, species) {
 }
 
 function findSpeciesId(entry, pokemonSpecies, formPokemon) {
+  if (entry.costume) return entry.dex; // costumes (add-costumes.js) already know their species
   if (pokemonSpecies.has(entry.id)) return pokemonSpecies.get(entry.id);
   // Expanded form entries use form id + 10000 (see update-pokelist.js)
   const pokemonId = formPokemon.get(entry.id - 10000);
@@ -283,6 +293,8 @@ async function main() {
       // The species' default Pokemon (or its expanded colour/pattern forms)
       // first, then other forms like megas by id
       isDefault: entry.id === speciesId || !pokemonSpecies.has(entry.id) ? 0 : 1,
+      // Costumes go after all of a species' regular forms
+      isCostume: entry.costume ? 1 : 0,
     };
   });
 
@@ -303,13 +315,18 @@ async function main() {
 
   keyed.sort(
     (a, b) =>
-      a.speciesRank - b.speciesRank || a.stage - b.stage || a.isDefault - b.isDefault || a.entry.id - b.entry.id
+      a.speciesRank - b.speciesRank ||
+      a.isCostume - b.isCostume ||
+      a.stage - b.stage ||
+      a.isDefault - b.isDefault ||
+      a.entry.id - b.entry.id
   );
   keyed.forEach((k, i) => (k.entry.familyOrder = i + 1));
 
   fs.writeFileSync(POKELIST_PATH, JSON.stringify(file, null, 2));
 
   console.log(`Added familyOrder and evolvesFrom to ${pokelist.length} Pokemon`);
+  console.log('Run scripts/update-availability.js next to refresh released and shiny status');
   if (unmatched.length) console.log(`No species found (sorted last): ${unmatched.join(', ')}`);
 }
 

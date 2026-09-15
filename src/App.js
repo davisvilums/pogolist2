@@ -17,7 +17,7 @@ import GetDataGrahp from "./data/GetDataGrahp";
 import { defaultEvolutionRules } from "./data/evolution";
 
 // Data version - increment this when pokelist.json structure changes
-const DATA_VERSION = 23;
+const DATA_VERSION = 25;
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
