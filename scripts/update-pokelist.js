@@ -99,6 +99,11 @@ function determineSprite(pokemon) {
     return specialSprites[pokemon.id];
   }
 
+  // Unown's official artwork shows the F form; the home sprite is A
+  if (pokemon.id === 201) {
+    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/201.png';
+  }
+
   // Use home sprites for gmax Pokemon (more reliable than pokesprite)
   if (pokemon.name.includes('-gmax')) {
     return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${pokemon.id}.png`;
@@ -186,6 +191,10 @@ async function main() {
       if (pokemon.name.includes('-mega')) pok.tags.push('mega');
       if (pokemon.name.includes('-gmax')) pok.tags.push('gmax');
       if (pokemon.name.includes('-totem')) pok.tags.push('totem');
+      // Koraidon builds and Miraidon modes
+      if (/^(koraidon|miraidon)-/.test(pokemon.name)) pok.tags.push('build');
+      // Minior colours besides the default red meteor (Unown letters are tagged below)
+      if (pokemon.name.startsWith('minior-') && pokemon.name !== 'minior-red-meteor') pok.tags.push('variants');
 
       // Paradox Legendaries (not marked as legendary in PokeAPI)
       const paradoxLegendaries = [1009, 1010, 1020, 1021, 1022, 1023];
@@ -235,6 +244,19 @@ async function main() {
             }
           }
           pokeList.push(pokf);
+        });
+      } else if (pokemon.id === 201) {
+        // Unown: keep the regular entry and add the other letters, tagged "variants"
+        pokeList.push(pok);
+        pokemon.pokemon_v2_pokemonforms.slice(1).forEach((form) => {
+          const letter = form.name.replace('unown-', '');
+          pokeList.push({
+            ...pok,
+            id: form.id + 10000,
+            name: form.name,
+            tags: [...pok.tags, 'variants'],
+            sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/201-${letter}.png`,
+          });
         });
       } else {
         pokeList.push(pok);

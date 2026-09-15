@@ -14,6 +14,8 @@ const defaultFilters = {
   baby: true,
   gmax: false,
   totem: false,
+  build: false,
+  variants: false,
   g1: true,
   g2: true,
   g3: true,
@@ -30,7 +32,11 @@ const getStoredFilters = () => {
   try {
     const stored = localStorage.getItem("pokemonFilters");
     if (stored) {
-      return { ...defaultFilters, ...JSON.parse(stored) };
+      // Only keep known filters, so renamed or removed ones don't linger as chips
+      const parsed = JSON.parse(stored);
+      return Object.fromEntries(
+        Object.keys(defaultFilters).map((key) => [key, key in parsed ? parsed[key] : defaultFilters[key]])
+      );
     }
   } catch (e) {
     console.error("Error loading filters from localStorage:", e);
@@ -50,6 +56,11 @@ const runFilters = (pl, filters) => {
       pl = pl.filter((p) => p.tags && !p.tags.includes("gmax"));
     if (!filters["totem"])
       pl = pl.filter((p) => p.tags && !p.tags.includes("totem"));
+    if (!filters["build"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("build"));
+    // Hides Unown letters and Minior colours; the regular Unown and red Minior stay
+    if (!filters["variants"])
+      pl = pl.filter((p) => p.tags && !p.tags.includes("variants"));
     if (!filters["legendary"])
       pl = pl.filter((p) => p.tags && !p.tags.includes("legendary"));
     if (!filters["mythical"])
@@ -73,7 +84,7 @@ const runFilters = (pl, filters) => {
   return pl;
 };
 
-const TagFilters = ({ filtersList, setFilters }) => {
+const TagFilters = ({ filtersList, setFilters, children }) => {
   const [filters, setFilter] = useState(filtersList);
 
   useEffect(() => {
@@ -97,9 +108,8 @@ const TagFilters = ({ filtersList, setFilters }) => {
     <Box
       sx={{
         display: "flex",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         flexWrap: "wrap",
-        pb: "2px",
       }}
     >
       {filters &&
@@ -107,21 +117,18 @@ const TagFilters = ({ filtersList, setFilters }) => {
           <Chip
             key={f}
             label={f}
+            size="small"
             clickable
             color={filters[f] ? "primary" : "default"}
             onClick={() => handleClick(f)}
-            sx={{ margin: "0 2px 5px" }}
+            sx={{ margin: "2px" }}
           />
         ))}
+      {children}
     </Box>
   );
 };
 const evolutionFilterOptions = [
-  {
-    key: "hideEvolutionsOfHidden",
-    label: "hide evolutions of hidden",
-    tooltip: "Also hide Pokémon that evolve from a Pokémon hidden by a collection",
-  },
   {
     key: "lowestStageOnly",
     label: "lowest stage only",
@@ -129,28 +136,20 @@ const evolutionFilterOptions = [
   },
 ];
 
-const EvolutionFilters = ({ rules, setRules }) => (
-  <Box
-    sx={{
-      display: "flex",
-      justifyContent: "center",
-      flexWrap: "wrap",
-      pb: "2px",
-    }}
-  >
-    {evolutionFilterOptions.map(({ key, label, tooltip }) => (
-      <Tooltip key={key} title={tooltip}>
-        <Chip
-          label={label}
-          clickable
-          variant={rules[key] ? "filled" : "outlined"}
-          color={rules[key] ? "secondary" : "default"}
-          onClick={() => setRules({ ...rules, [key]: !rules[key] })}
-          sx={{ margin: "0 2px 5px" }}
-        />
-      </Tooltip>
-    ))}
-  </Box>
-);
+// Rendered as extra chips at the end of the TagFilters row
+const EvolutionFilters = ({ rules, setRules }) =>
+  evolutionFilterOptions.map(({ key, label, tooltip }) => (
+    <Tooltip key={key} title={tooltip}>
+      <Chip
+        label={label}
+        size="small"
+        clickable
+        variant={rules[key] ? "filled" : "outlined"}
+        color={rules[key] ? "secondary" : "default"}
+        onClick={() => setRules({ ...rules, [key]: !rules[key] })}
+        sx={{ margin: "2px" }}
+      />
+    </Tooltip>
+  ));
 
 export { filtersList, TagFilters, EvolutionFilters, runFilters };

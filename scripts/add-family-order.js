@@ -123,8 +123,64 @@ const REGIONAL_PARENTS = {
   clodsire: 'wooper-paldea',
 };
 
-// Megas, Gmax and totems come from the same species' regular form
-const SPECIAL_FORM = /(^|-)(mega(-[xyz])?|gmax|totem)(?=-|$)/;
+// Transformations and forme changes (not separate collectibles):
+// entry name -> the entries they are made from
+const TRANSFORMATION_PARENTS = {
+  'castform-sunny': ['castform'],
+  'castform-rainy': ['castform'],
+  'castform-snowy': ['castform'],
+  'deoxys-attack': ['deoxys-normal'],
+  'deoxys-defense': ['deoxys-normal'],
+  'deoxys-speed': ['deoxys-normal'],
+  'rotom-heat': ['rotom'],
+  'rotom-wash': ['rotom'],
+  'rotom-frost': ['rotom'],
+  'rotom-fan': ['rotom'],
+  'rotom-mow': ['rotom'],
+  'dialga-origin': ['dialga'],
+  'palkia-origin': ['palkia'],
+  'giratina-origin': ['giratina-altered'],
+  'shaymin-sky': ['shaymin-land'],
+  'tornadus-therian': ['tornadus-incarnate'],
+  'thundurus-therian': ['thundurus-incarnate'],
+  'landorus-therian': ['landorus-incarnate'],
+  'enamorus-therian': ['enamorus-incarnate'],
+  'kyurem-black': ['kyurem'],
+  'kyurem-white': ['kyurem'],
+  'keldeo-resolute': ['keldeo-ordinary'],
+  'meloetta-pirouette': ['meloetta-aria'],
+  'hoopa-unbound': ['hoopa'],
+  'wishiwashi-school': ['wishiwashi-solo'],
+  'mimikyu-busted': ['mimikyu-disguised'],
+  'necrozma-dusk': ['necrozma'],
+  'necrozma-dawn': ['necrozma'],
+  'necrozma-ultra': ['necrozma-dusk', 'necrozma-dawn'],
+  'magearna-original': ['magearna'],
+  // Zygarde grows 10% -> 50% -> Complete
+  'zygarde-50': ['zygarde-10'],
+  'zygarde-10-power-construct': ['zygarde-10'],
+  'zygarde-50-power-construct': ['zygarde-50'],
+  'zygarde-complete': ['zygarde-50', 'zygarde-50-power-construct'],
+  'zygarde-mega': ['zygarde-complete'],
+  'cramorant-gulping': ['cramorant'],
+  'cramorant-gorging': ['cramorant'],
+  'eiscue-noice': ['eiscue-ice'],
+  'morpeko-hangry': ['morpeko-full-belly'],
+  'zacian-crowned': ['zacian'],
+  'zamazenta-crowned': ['zamazenta'],
+  'eternatus-eternamax': ['eternatus'],
+  'zarude-dada': ['zarude'],
+  'calyrex-ice': ['calyrex'],
+  'calyrex-shadow': ['calyrex'],
+  'ogerpon-wellspring-mask': ['ogerpon'],
+  'ogerpon-hearthflame-mask': ['ogerpon'],
+  'ogerpon-cornerstone-mask': ['ogerpon'],
+  'terapagos-terastal': ['terapagos'],
+  'terapagos-stellar': ['terapagos-terastal'],
+};
+
+// Megas, Primals, Gmax and totems come from the same species' regular form
+const SPECIAL_FORM = /(^|-)(mega(-[xyz])?|primal|gmax|totem)(?=-|$)/;
 const REGIONAL_FORM = /(^|-)(alola|galar|hisui|paldea)(-|$)/;
 
 // Pick the entries matching a form suffix: exact match ("alola"), then the
@@ -158,10 +214,16 @@ function linkEvolutions(pokelist, speciesOf, species) {
   const byName = new Map(pokelist.map((e) => [e.name, e]));
   for (const item of info.values()) {
     let parents = [];
-    if (item.special) {
+    if (TRANSFORMATION_PARENTS[item.entry.name]) {
+      parents = TRANSFORMATION_PARENTS[item.entry.name].filter((n) => byName.has(n)).map((n) => info.get(byName.get(n)));
+    } else if (item.special) {
       const regular = bySpecies.get(item.species.id).filter((c) => !c.special);
       const baseSuffix = item.suffix.replace(SPECIAL_FORM, '').replace(/^-/, '');
-      if (regular.length) parents = matchBySuffix(regular, baseSuffix);
+      // Exact form first (Original Magearna's Mega); otherwise skip transformations
+      const exact = regular.filter((c) => c.suffix === baseSuffix);
+      const untransformed = regular.filter((c) => !TRANSFORMATION_PARENTS[c.entry.name]);
+      if (exact.length) parents = exact;
+      else if (regular.length) parents = matchBySuffix(untransformed.length ? untransformed : regular, baseSuffix);
     } else if (REGIONAL_PARENTS[item.species.name] && byName.has(REGIONAL_PARENTS[item.species.name])) {
       parents = [info.get(byName.get(REGIONAL_PARENTS[item.species.name]))];
     } else if (item.species.evolves_from_species_id) {
@@ -224,10 +286,26 @@ async function main() {
     };
   });
 
-  keyed.sort((a, b) => a.speciesRank - b.speciesRank || a.isDefault - b.isDefault || a.entry.id - b.entry.id);
-  keyed.forEach((k, i) => (k.entry.familyOrder = i + 1));
-
   linkEvolutions(pokelist, speciesOf, data.pokemon_v2_pokemonspecies);
+
+  // How many steps a form is from its species' first form (Zygarde 10% -> 50% ->
+  // Complete, Charizard -> Mega), so forms sort in stage order
+  const byId = new Map(pokelist.map((e) => [e.id, e]));
+  const stageInSpecies = (entry, seen = new Set()) => {
+    const sameSpeciesParents = (entry.evolvesFrom || [])
+      .map((id) => byId.get(id))
+      .filter((p) => p && speciesOf.get(p) === speciesOf.get(entry) && !seen.has(p));
+    if (!sameSpeciesParents.length) return 0;
+    seen.add(entry);
+    return 1 + Math.max(...sameSpeciesParents.map((p) => stageInSpecies(p, seen)));
+  };
+  keyed.forEach((k) => (k.stage = stageInSpecies(k.entry)));
+
+  keyed.sort(
+    (a, b) =>
+      a.speciesRank - b.speciesRank || a.stage - b.stage || a.isDefault - b.isDefault || a.entry.id - b.entry.id
+  );
+  keyed.forEach((k, i) => (k.entry.familyOrder = i + 1));
 
   fs.writeFileSync(POKELIST_PATH, JSON.stringify(file, null, 2));
 

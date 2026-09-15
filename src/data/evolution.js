@@ -2,7 +2,6 @@
 // Relies on the `evolvesFrom` parent ids in pokelist.json.
 
 export const defaultEvolutionRules = {
-  hideEvolutionsOfHidden: false,
   lowestStageOnly: false,
 };
 
@@ -26,50 +25,35 @@ export function buildAncestors(pokemonData) {
   return ancestors;
 }
 
-// Ids hidden by collections: collections set to "hide", plus the active filter
-// set's hidden collections and, when it is inverted/excluded, its shown ones.
-export function getCollectionHiddenIds(list, filterSets, activeFilterSetId, activeFilterSetMode) {
-  const hidden = new Set();
-  const add = (cols) => cols.forEach((c) => (c.pokemon || []).forEach((id) => hidden.add(id)));
+// id -> Set of every id it can evolve into (children, grandchildren, ...)
+export function buildDescendants(pokemonData) {
+  const descendants = new Map();
+  buildAncestors(pokemonData).forEach((ancestorIds, id) =>
+    ancestorIds.forEach((ancestor) => {
+      if (!descendants.has(ancestor)) descendants.set(ancestor, new Set());
+      descendants.get(ancestor).add(id);
+    })
+  );
+  return descendants;
+}
 
-  add(list.filter((c) => c.visibility === "hide"));
-
-  const active = filterSets.find((fs) => fs.id === activeFilterSetId);
-  if (active) {
-    add(list.filter((c) => active.filters[c.id] === "hide"));
-    const showCols = list.filter((c) => active.filters[c.id] === "show");
-    const inverted = active.invert !== (activeFilterSetMode === "exclude");
-    if (inverted && showCols.length > 0) {
-      if (active.mode === "and") {
-        (showCols[0].pokemon || [])
-          .filter((id) => showCols.every((c) => c.pokemon && c.pokemon.includes(id)))
-          .forEach((id) => hidden.add(id));
-      } else {
-        add(showCols);
-      }
-    }
-  }
-  return hidden;
+// A collection's ids, plus what they evolve into when "related" is on.
+// Only upwards: a hundo Clefairy can become Clefable, but never Cleffa.
+export function getCollectionIds(collection, descendants) {
+  const ids = collection.pokemon || [];
+  if (!collection.related || !descendants) return ids;
+  const result = new Set(ids);
+  ids.forEach((id) => (descendants.get(id) || []).forEach((child) => result.add(child)));
+  return [...result];
 }
 
 // Apply the evolution rules to a list of already-visible ids.
-// - hideEvolutionsOfHidden: drop ids that evolve from a collection-hidden id
 // - lowestStageOnly: drop ids that evolve from another visible id
-export function applyEvolutionRules(ids, rules, ancestors, hiddenIds) {
-  if (!rules || !ancestors) return ids;
-  let result = ids;
-  if (rules.hideEvolutionsOfHidden) {
-    result = result.filter((id) => {
-      for (const a of ancestors.get(id) || []) if (hiddenIds.has(a)) return false;
-      return true;
-    });
-  }
-  if (rules.lowestStageOnly) {
-    const visible = new Set(result);
-    result = result.filter((id) => {
-      for (const a of ancestors.get(id) || []) if (visible.has(a)) return false;
-      return true;
-    });
-  }
-  return result;
+export function applyEvolutionRules(ids, rules, ancestors) {
+  if (!rules || !ancestors || !rules.lowestStageOnly) return ids;
+  const visible = new Set(ids);
+  return ids.filter((id) => {
+    for (const a of ancestors.get(id) || []) if (visible.has(a)) return false;
+    return true;
+  });
 }

@@ -1,21 +1,20 @@
 import * as React from "react";
-import { styled } from "@mui/material/styles";
+import { styled, alpha } from "@mui/material/styles";
 import Check from "@mui/icons-material/CheckBox";
 
 const PokemonItem = styled("div")`
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.palette.divider};
   width: 100px;
   display: flex;
   justify-content: center;
   flex-direction: column;
   position: relative;
   margin: 0 -1px -1px 0;
-  cursor: pointer;
   &.selected {
-    background: rgba(85, 108, 214, 0.08);
+    background: ${({ theme }) => alpha(theme.palette.primary.main, 0.12)};
   }
   &:hover {
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: ${({ theme }) => theme.palette.action.hover};
   }
 `;
 
@@ -44,6 +43,7 @@ const PokemonSpriteWrap = styled("div")`
   align-items: flex-start;
   padding-top: 5px;
   min-height: 104px;
+  cursor: pointer;
   & img {
     max-width: 100%;
     max-height: 100px;
@@ -55,7 +55,7 @@ const PokemonSpriteWrap = styled("div")`
 `;
 
 const PokemonMeta = styled("div")`
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: ${({ theme }) => theme.palette.action.hover};
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -90,8 +90,8 @@ const CollectionTagsWrap = styled("div")`
 const CollectionTag = styled("span")`
   display: inline-flex;
   align-items: center;
-  background: #e3e8f7;
-  color: #3f51b5;
+  background: ${({ theme }) => alpha(theme.palette.primary.main, 0.15)};
+  color: ${({ theme }) => theme.palette.primary.main};
   font-size: 9px;
   line-height: 1;
   padding: 1px 3px;
@@ -113,7 +113,13 @@ const CollectionTag = styled("span")`
   }
 `;
 
-function PokemonCard({ pokemon, selected, select, collections, showCollectionTags, removePokemonFromCollection }) {
+// PokeAPI keeps shiny sprites in a "shiny" folder next to the regular ones
+function getShinySprite(sprite) {
+  if (!sprite || !sprite.includes("PokeAPI/sprites")) return sprite;
+  return sprite.replace(/\/([^/]+\.png)$/, "/shiny/$1");
+}
+
+function PokemonCard({ pokemon, selected, select, collections, showCollectionTags, removePokemonFromCollection, showShiny }) {
   var TitleSize = "15px";
 
   if (pokemon.name.length > 15) {
@@ -125,14 +131,24 @@ function PokemonCard({ pokemon, selected, select, collections, showCollectionTag
   }
 
   return (
-    <PokemonItem className={selected ? "selected" : ""} onClick={select}>
+    <PokemonItem className={selected ? "selected" : ""}>
       {/* {selected} */}
       <PokemonID>#{pokemon.id}</PokemonID>
-      <PokemonGeneration>
+      {/* Only the picture and the G/checkbox badge select; the text stays selectable */}
+      <PokemonGeneration onClick={select}>
         {selected ? <Check color="primary" /> : "G" + pokemon.gen}
       </PokemonGeneration>
-      <PokemonSpriteWrap>
-        <img src={pokemon.sprite} alt="" />
+      <PokemonSpriteWrap onClick={select}>
+        <img
+          src={showShiny ? getShinySprite(pokemon.sprite) : pokemon.sprite}
+          alt=""
+          onError={(e) => {
+            // Fall back to the regular sprite when no shiny version exists
+            if (showShiny && e.currentTarget.src !== pokemon.sprite) {
+              e.currentTarget.src = pokemon.sprite;
+            }
+          }}
+        />
       </PokemonSpriteWrap>
 
       <PokemonMeta>

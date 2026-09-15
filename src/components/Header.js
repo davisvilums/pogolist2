@@ -3,13 +3,18 @@ import MuiAppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
-import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
-import InputBase from "@mui/material/InputBase";
-import Switch from "@mui/material/Switch";
 import Tooltip from "@mui/material/Tooltip";
+import Box from "@mui/material/Box";
 import LabelIcon from "@mui/icons-material/Label";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import SortIcon from "@mui/icons-material/Sort";
+import UndoIcon from "@mui/icons-material/Undo";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -28,56 +33,45 @@ const AppBar = styled(MuiAppBar, {
   }),
 }));
 
-const Search = styled("div")(({ theme }) => ({
-  position: "relative",
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
-  "&:hover": {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
-  },
-  marginRight: theme.spacing(2),
-  marginLeft: 0,
-  width: "100%",
-  [theme.breakpoints.up("sm")]: {
-    // marginLeft: theme.spacing(3),
-    marginLeft: "auto",
-    width: "auto",
-  },
-}));
-
-const SearchIconWrapper = styled("div")(({ theme }) => ({
-  padding: theme.spacing(0, 2),
-  height: "100%",
-  position: "absolute",
-  pointerEvents: "none",
+// Buttons that switch the sticky panel below the app bar; one open at a time
+const PanelButtons = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  justifyContent: "center",
-}));
-
-const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: "inherit",
-  "& .MuiInputBase-input": {
-    padding: theme.spacing(1, 1, 1, 0),
-    // vertical padding + font size from searchIcon
-    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-    transition: theme.transitions.create("width"),
-    width: "100%",
-    [theme.breakpoints.up("md")]: {
-      width: "20ch",
-    },
+  marginLeft: theme.spacing(1),
+  padding: 2,
+  borderRadius: 999,
+  backgroundColor: alpha(theme.palette.common.white, 0.08),
+  "& .MuiIconButton-root": { opacity: 0.55 },
+  "& .MuiIconButton-root.active": {
+    opacity: 1,
+    backgroundColor: alpha(theme.palette.common.white, 0.18),
   },
 }));
+
+const panels = [
+  { id: "filters", label: "filters", Icon: FilterListIcon },
+  { id: "info", label: "sort", Icon: SortIcon },
+  { id: "search", label: "search", Icon: SearchIcon },
+];
 
 export default function Header(props) {
   const {
     open,
     width,
     handleDrawerOpen,
-    searchTerm,
-    setSearchTerm,
     showCollectionTags,
     setShowCollectionTags,
+    showShiny,
+    setShowShiny,
+    lastAction,
+    handleUndo,
+    themeMode,
+    toggleThemeMode,
+    activePanel,
+    setActivePanel,
+    searchTerm,
+    title,
+    pokemonCount,
   } = props;
 
   return (
@@ -92,9 +86,15 @@ export default function Header(props) {
         >
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" noWrap component="div">
-          Personal Pokedex
+        {/* Selected collection and how many Pokémon are on screen */}
+        <Typography variant="h6" noWrap component="div" sx={{ minWidth: 0 }}>
+          {title}
         </Typography>
+        {pokemonCount !== null && (
+          <Typography variant="body1" component="div" sx={{ ml: 1.5, opacity: 0.7, flexShrink: 0 }}>
+            {pokemonCount}
+          </Typography>
+        )}
         <div
           style={{
             display: "flex",
@@ -102,6 +102,35 @@ export default function Header(props) {
             marginLeft: "auto",
           }}
         >
+          <Tooltip title="Undo last add">
+            <span>
+              <IconButton
+                color="inherit"
+                aria-label="undo last add"
+                onClick={handleUndo}
+                disabled={!lastAction}
+                sx={{ mr: 1, "&.Mui-disabled": { color: "inherit", opacity: 0.3 } }}
+              >
+                <UndoIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title={showShiny ? "Show regular sprites" : "Show shiny sprites"}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle shiny sprites"
+              aria-pressed={showShiny}
+              onClick={() => setShowShiny(!showShiny)}
+              sx={{ mr: 1 }}
+            >
+              <AutoAwesomeIcon
+                sx={{
+                  opacity: showShiny ? 1 : 0.5,
+                  color: showShiny ? "#ffd54f" : "inherit",
+                }}
+              />
+            </IconButton>
+          </Tooltip>
           <Tooltip
             title={
               showCollectionTags
@@ -109,62 +138,49 @@ export default function Header(props) {
                 : "Show collection tags"
             }
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                color: "white",
-                marginRight: "10px",
-              }}
+            <IconButton
+              color="inherit"
+              aria-label="toggle collection tags"
+              aria-pressed={showCollectionTags}
+              onClick={() => setShowCollectionTags(!showCollectionTags)}
+              sx={{ mr: 1 }}
             >
-              <LabelIcon
-                sx={{ fontSize: 20, opacity: showCollectionTags ? 1 : 0.5 }}
-              />
-              <Switch
-                size="small"
-                checked={showCollectionTags}
-                onChange={(e) => setShowCollectionTags(e.target.checked)}
-                color="default"
-                sx={{
-                  "& .MuiSwitch-thumb": { backgroundColor: "white" },
-                  "& .MuiSwitch-track": {
-                    backgroundColor: "rgba(255,255,255,0.3)",
-                  },
-                  "& .Mui-checked + .MuiSwitch-track": {
-                    backgroundColor: "rgba(255,255,255,0.5) !important",
-                  },
-                }}
-              />
-            </div>
+              {showCollectionTags ? (
+                <LabelIcon />
+              ) : (
+                <LabelOutlinedIcon sx={{ opacity: 0.5 }} />
+              )}
+            </IconButton>
           </Tooltip>
-          <Search sx={{ marginLeft: 0, marginRight: 0 }}>
-            <SearchIconWrapper>
-              <SearchIcon />
-            </SearchIconWrapper>
-            <StyledInputBase
-              placeholder="Search…"
-              inputProps={{ "aria-label": "search" }}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ "& .MuiInputBase-input": { paddingRight: searchTerm ? "32px" : undefined } }}
-            />
-            {searchTerm && (
-              <IconButton
-                size="small"
-                onClick={() => setSearchTerm("")}
-                sx={{
-                  position: "absolute",
-                  right: 4,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "inherit",
-                  padding: "4px",
-                }}
-              >
-                <ClearIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            )}
-          </Search>
+          <Tooltip title={themeMode === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle dark theme"
+              aria-pressed={themeMode === "dark"}
+              onClick={toggleThemeMode}
+            >
+              {themeMode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
+          </Tooltip>
+          <PanelButtons>
+            {panels.map(({ id, label, Icon }) => {
+              const active = activePanel === id;
+              return (
+                <Tooltip key={id} title={active ? `Hide ${label}` : `Show ${label}`}>
+                  <IconButton
+                    color="inherit"
+                    aria-label={`toggle ${label}`}
+                    aria-pressed={active}
+                    className={active ? "active" : ""}
+                    onClick={() => setActivePanel(active ? null : id)}
+                  >
+                    {/* Search icon turns yellow while a search is applied but its panel is hidden */}
+                    <Icon sx={id === "search" && searchTerm && !active ? { color: "#ffd54f" } : undefined} />
+                  </IconButton>
+                </Tooltip>
+              );
+            })}
+          </PanelButtons>
         </div>
       </Toolbar>
     </AppBar>

@@ -17,7 +17,7 @@ import GetDataGrahp from "./data/GetDataGrahp";
 import { defaultEvolutionRules } from "./data/evolution";
 
 // Data version - increment this when pokelist.json structure changes
-const DATA_VERSION = 16;
+const DATA_VERSION = 23;
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
@@ -56,7 +56,7 @@ const listD = [
   },
 ];
 
-export default function PersistentDrawerLeft() {
+export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
   const drawerWidth = 320;
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
@@ -86,15 +86,24 @@ export default function PersistentDrawerLeft() {
   const [showCollectionTags, setShowCollectionTags] = React.useState(() => {
     return JSON.parse(localStorage.getItem("showCollectionTags")) || false;
   });
+  const [showShiny, setShowShiny] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("showShiny")) || false;
+  });
   const [tagVisibility, setTagVisibility] = React.useState(() => {
     return JSON.parse(localStorage.getItem("tagVisibility")) || {};
   });
   const [visiblePokemonIds, setVisiblePokemonIds] = React.useState([]);
+  // Which sticky panel shows below the app bar: "info", "filters", "search" or none
+  const [activePanel, setActivePanel] = React.useState(() => {
+    const stored = localStorage.getItem("activePanel");
+    return stored === null ? "info" : stored || null;
+  });
   const [evolutionRules, setEvolutionRules] = React.useState(() => {
-    return {
-      ...defaultEvolutionRules,
-      ...JSON.parse(localStorage.getItem("evolutionRules")),
-    };
+    // Only keep known rules, so removed ones don't linger in saved settings
+    const stored = JSON.parse(localStorage.getItem("evolutionRules")) || {};
+    return Object.fromEntries(
+      Object.entries(defaultEvolutionRules).map(([key, value]) => [key, key in stored ? stored[key] : value])
+    );
   });
   const [filterSets, setFilterSets] = React.useState(() => {
     return JSON.parse(localStorage.getItem("filterSets")) || [];
@@ -220,12 +229,20 @@ export default function PersistentDrawerLeft() {
   }, [showCollectionTags]);
 
   React.useEffect(() => {
+    localStorage.setItem("showShiny", JSON.stringify(showShiny));
+  }, [showShiny]);
+
+  React.useEffect(() => {
     localStorage.setItem("tagVisibility", JSON.stringify(tagVisibility));
   }, [tagVisibility]);
 
   React.useEffect(() => {
     localStorage.setItem("evolutionRules", JSON.stringify(evolutionRules));
   }, [evolutionRules]);
+
+  React.useEffect(() => {
+    localStorage.setItem("activePanel", activePanel || "");
+  }, [activePanel]);
 
   React.useEffect(() => {
     localStorage.setItem("filterSets", JSON.stringify(filterSets));
@@ -275,10 +292,19 @@ export default function PersistentDrawerLeft() {
         width={drawerWidth}
         open={open}
         handleDrawerOpen={handleDrawerOpen}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
         showCollectionTags={showCollectionTags}
         setShowCollectionTags={setShowCollectionTags}
+        showShiny={showShiny}
+        setShowShiny={setShowShiny}
+        themeMode={themeMode}
+        toggleThemeMode={toggleThemeMode}
+        lastAction={lastAction}
+        handleUndo={handleUndo}
+        activePanel={activePanel}
+        setActivePanel={setActivePanel}
+        searchTerm={searchTerm}
+        title={selected.text || "Personal Pokedex"}
+        pokemonCount={pokemonData ? visiblePokemonIds.length : null}
       />
       <Drawer
         sx={{
@@ -334,10 +360,11 @@ export default function PersistentDrawerLeft() {
             list={list}
             selected={selected}
             setSelected={updateSelected}
-            lastAction={lastAction}
-            handleUndo={handleUndo}
+            activePanel={activePanel}
             searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
             showCollectionTags={showCollectionTags}
+            showShiny={showShiny}
             tagVisibility={tagVisibility}
             removePokemonFromCollection={removePokemonFromCollection}
             filterSets={filterSets}

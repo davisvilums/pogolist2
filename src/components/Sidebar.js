@@ -29,7 +29,12 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import DataImportExport from "./DataImportExport";
-import { buildAncestors, getCollectionHiddenIds, applyEvolutionRules } from "../data/evolution";
+import {
+  buildAncestors,
+  buildDescendants,
+  getCollectionIds,
+  applyEvolutionRules,
+} from "../data/evolution";
 
 import IconPlus from "@mui/icons-material/ControlPoint";
 import IconCross from "@mui/icons-material/CancelOutlined";
@@ -46,6 +51,7 @@ import LabelIcon from "@mui/icons-material/Label";
 import LabelOffIcon from "@mui/icons-material/LabelOff";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import AddIcon from "@mui/icons-material/Add";
 
 function SortableItem({
   id,
@@ -59,6 +65,7 @@ function SortableItem({
   tagVisible,
   onToggleTagVisibility,
   onCycleVisibility,
+  onToggleRelated,
 }) {
   const {
     attributes,
@@ -110,10 +117,38 @@ function SortableItem({
                   }}
                 >
                   {tagVisible ? (
-                    <LabelIcon sx={{ fontSize: 18, color: "#3f51b5" }} />
+                    <LabelIcon sx={{ fontSize: 18, color: "primary.main" }} />
                   ) : (
                     <LabelOffIcon sx={{ fontSize: 18, opacity: 0.4 }} />
                   )}
+                </IconButton>
+              </Tooltip>
+            )}
+            {item.visibility !== "ignore" && (
+              <Tooltip
+                title={
+                  item.related
+                    ? "Related Pokémon included (what these can evolve into)"
+                    : "Include related Pokémon (what these can evolve into)"
+                }
+                placement="left"
+              >
+                <IconButton
+                  size="small"
+                  aria-label="include related Pokémon"
+                  aria-pressed={!!item.related}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleRelated(item.id);
+                  }}
+                >
+                  <AddIcon
+                    sx={
+                      item.related
+                        ? { color: item.visibility === "show" ? "#f9a825" : "#d32f2f" }
+                        : { opacity: 0.35 }
+                    }
+                  />
                 </IconButton>
               </Tooltip>
             )}
@@ -201,6 +236,7 @@ const toNameList = (ids, pokemonData) => {
 function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, visiblePokemonIds }) {
   const selectedCollection = list.find((item) => item.selected);
   const ancestors = useMemo(() => buildAncestors(pokemonData), [pokemonData]);
+  const descendants = useMemo(() => buildDescendants(pokemonData), [pokemonData]);
   const showOnScreen =
     selectedCollection &&
     isCollectionHidden(selectedCollection, filterSets, activeFilterSetId, activeFilterSetMode);
@@ -213,16 +249,17 @@ function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId
     // The selected collection is hidden: list what's on screen instead
     if (showOnScreen) return toNameList(visiblePokemonIds || [], pokemonData);
 
+    // Per-collection visibility, including related descendants
+    const visShowCols = list.filter((c) => c.visibility === "show");
+    const visShowIds = new Set(visShowCols.flatMap((c) => getCollectionIds(c, descendants)));
+    const visHideIds = new Set(
+      list.filter((c) => c.visibility === "hide").flatMap((c) => getCollectionIds(c, descendants))
+    );
+
     const visibleIds = selectedCollection.pokemon
       .filter((id) => {
-        // Per-collection visibility
-        const visShowCols = list.filter((c) => c.visibility === "show");
-        const visHideCols = list.filter((c) => c.visibility === "hide");
-
-        if (visShowCols.length > 0) {
-          if (!visShowCols.some((c) => c.pokemon && c.pokemon.includes(id))) return false;
-        }
-        if (visHideCols.some((c) => c.pokemon && c.pokemon.includes(id))) return false;
+        if (visShowCols.length > 0 && !visShowIds.has(id)) return false;
+        if (visHideIds.has(id)) return false;
 
         // Active filter set
         const active = filterSets.find((fs) => fs.id === activeFilterSetId);
@@ -247,11 +284,7 @@ function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId
         return true;
       });
 
-    const hiddenIds = getCollectionHiddenIds(list, filterSets, activeFilterSetId, activeFilterSetMode);
-    return toNameList(
-      applyEvolutionRules(visibleIds, evolutionRules, ancestors, hiddenIds),
-      pokemonData
-    );
+    return toNameList(applyEvolutionRules(visibleIds, evolutionRules, ancestors), pokemonData);
   };
 
   return (
@@ -321,7 +354,7 @@ function FilterSetEditor({ filterSet, list, filterSets, setFilterSets }) {
             >
               <IconButton size="small" onClick={() => cycleRole(col.id)}>
                 {role === "show" ? (
-                  <FilterAltIcon sx={{ color: "#1976d2" }} />
+                  <FilterAltIcon sx={{ color: "primary.main" }} />
                 ) : role === "hide" ? (
                   <VisibilityOffIcon sx={{ color: "#d32f2f" }} />
                 ) : (
@@ -436,6 +469,14 @@ export default function Sidebar({
     setList(newList);
   };
 
+  const handleToggleRelated = (collectionId) => {
+    setList(
+      list.map((item) =>
+        item.id === collectionId ? { ...item, related: !item.related } : item
+      )
+    );
+  };
+
   const handleToggleTagVisibility = (collectionId) => {
     setTagVisibility((prev) => ({
       ...prev,
@@ -526,6 +567,7 @@ export default function Sidebar({
                 tagVisible={tagVisibility[item.id] !== false}
                 onToggleTagVisibility={handleToggleTagVisibility}
                 onCycleVisibility={handleCycleVisibility}
+                onToggleRelated={handleToggleRelated}
               />
             ))}
           </SortableContext>

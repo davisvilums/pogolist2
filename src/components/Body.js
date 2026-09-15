@@ -1,11 +1,66 @@
 import * as React from "react";
 import Paper from "@mui/material/Paper";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import IconButton from "@mui/material/IconButton";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import { styled } from "@mui/material/styles";
 import PokemonCard from "./PokemonCard";
 import { TagFilters, EvolutionFilters, filtersList, runFilters } from "./TagFilters";
-import { buildAncestors, getCollectionHiddenIds, applyEvolutionRules } from "../data/evolution";
-import Toolbar from "./Toolbar";
+import {
+  buildAncestors,
+  buildDescendants,
+  getCollectionIds,
+  applyEvolutionRules,
+} from "../data/evolution";
+import SortPanel, { FilterSetChips } from "./Toolbar";
 import Pagination from "./Pagination";
+
+// Copies the app bar's responsive minHeight rules as `top` offsets
+const toTopOffsets = (style) =>
+  Object.fromEntries(
+    Object.entries(style).map(([key, value]) =>
+      key === "minHeight" ? ["top", value] : [key, toTopOffsets(value)]
+    )
+  );
+
+// Sticky area below the app bar showing the panel picked in the header
+const PanelArea = styled("div")(({ theme }) => ({
+  position: "sticky",
+  zIndex: theme.zIndex.appBar - 1,
+  backgroundColor: theme.palette.background.paper,
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  ...toTopOffsets(theme.mixins.toolbar),
+  "&:empty": { display: "none" },
+}));
+
+// Every panel shares this height (filters only grow when their chips wrap on narrow screens)
+const PANEL_HEIGHT = 56;
+
+const SortPanelWrap = styled("div")({
+  height: PANEL_HEIGHT,
+});
+
+const FiltersPanel = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: theme.spacing(2),
+  minHeight: PANEL_HEIGHT,
+  padding: theme.spacing(0.5, 2),
+}));
+
+const SearchPanel = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: theme.spacing(2),
+  height: PANEL_HEIGHT,
+  padding: theme.spacing(0, 2),
+}));
 
 const PokemonWrap = styled("div")`
   display: flex;
@@ -48,10 +103,11 @@ export default function Body({
   list,
   selected,
   setSelected,
-  lastAction,
-  handleUndo,
+  activePanel,
   searchTerm,
+  setSearchTerm,
   showCollectionTags,
+  showShiny,
   tagVisibility,
   removePokemonFromCollection,
   filterSets,
@@ -71,12 +127,12 @@ export default function Body({
   });
   const [page, setPage] = React.useState(0);
   const [itemsPerPage, setItemsPerPage] = React.useState(50);
-  const [showfilters, setShowFilters] = React.useState(false);
   const [warning, setWarning] = React.useState("");
   const [filters, setFilters] = React.useState(filtersList);
   const [rows, setRows] = React.useState(data);
   const ref = React.useRef(null);
   const ancestors = React.useMemo(() => buildAncestors(data), [data]);
+  const descendants = React.useMemo(() => buildDescendants(data), [data]);
 
   // Share what's on screen (all pages) with the sidebar name list
   React.useEffect(() => {
@@ -107,12 +163,12 @@ export default function Body({
 
     if (showCols.length > 0) {
       const showIds = new Set();
-      showCols.forEach((c) => (c.pokemon || []).forEach((id) => showIds.add(id)));
+      showCols.forEach((c) => getCollectionIds(c, descendants).forEach((id) => showIds.add(id)));
       pl = pl.filter((item) => showIds.has(item.id));
     }
     if (hideCols.length > 0) {
       const hideIds = new Set();
-      hideCols.forEach((c) => (c.pokemon || []).forEach((id) => hideIds.add(id)));
+      hideCols.forEach((c) => getCollectionIds(c, descendants).forEach((id) => hideIds.add(id)));
       pl = pl.filter((item) => !hideIds.has(item.id));
     }
 
@@ -146,29 +202,17 @@ export default function Body({
     }
 
     // Hide evolutions based on the evolution rules
-    const hiddenIds = getCollectionHiddenIds(list, filterSets, activeFilterSetId, activeFilterSetMode);
-    const visibleIds = new Set(
-      applyEvolutionRules(pl.map((p) => p.id), evolutionRules, ancestors, hiddenIds)
-    );
+    const visibleIds = new Set(applyEvolutionRules(pl.map((p) => p.id), evolutionRules, ancestors));
     pl = pl.filter((p) => visibleIds.has(p.id));
 
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, ancestors]);
+  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, ancestors, descendants]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
-  };
-
-  const handleSelectAllClick = (event) => {
-    // if (event.target.checked) {
-    //   const newSelecteds = rows.map((n) => n.id);
-    //   setSelected(newSelecteds);
-    //   return;
-    // }
-    // setSelected([]);
   };
 
   const handleClick = (event, id) => {
@@ -206,38 +250,67 @@ export default function Body({
     // return 1;
   };
 
-  let title = "Pokedex";
-  if (list) {
-    let obj = list.find((o) => o.selected === true);
-    if (obj) title = obj.text;
-  }
-
   return (
     <Paper sx={{ width: "100%", mb: 2 }}>
-      <Toolbar
-        title={title}
-        numSelected={selected.length}
-        rowCount={rows.length}
-        handleSelectAllClick={handleSelectAllClick}
-        handleRequestSort={handleRequestSort}
-        warning={warning}
-        orderBy={orderBy}
-        order={order}
-        toggleFilters={() => setShowFilters(!showfilters)}
-        lastAction={lastAction}
-        handleUndo={handleUndo}
-        filterSets={filterSets}
-        activeFilterSetId={activeFilterSetId}
-        setActiveFilterSetId={setActiveFilterSetId}
-        activeFilterSetMode={activeFilterSetMode}
-        setActiveFilterSetMode={setActiveFilterSetMode}
-      />
-      {showfilters && (
-        <>
-          <TagFilters filtersList={filters} setFilters={setFilters} />
-          <EvolutionFilters rules={evolutionRules} setRules={setEvolutionRules} />
-        </>
-      )}
+      <PanelArea>
+        {activePanel === "info" && (
+          <SortPanelWrap>
+            <SortPanel order={order} orderBy={orderBy} onRequestSort={handleRequestSort} />
+          </SortPanelWrap>
+        )}
+        {activePanel === "filters" && (
+          <FiltersPanel>
+            <TagFilters filtersList={filters} setFilters={setFilters}>
+              <EvolutionFilters rules={evolutionRules} setRules={setEvolutionRules} />
+            </TagFilters>
+            <FilterSetChips
+              filterSets={filterSets}
+              activeFilterSetId={activeFilterSetId}
+              setActiveFilterSetId={setActiveFilterSetId}
+              activeFilterSetMode={activeFilterSetMode}
+              setActiveFilterSetMode={setActiveFilterSetMode}
+            />
+          </FiltersPanel>
+        )}
+        {activePanel === "search" && (
+          <SearchPanel>
+            <TextField
+              autoFocus
+              size="small"
+              sx={{ width: 260, maxWidth: "100%" }}
+              placeholder="Search Pokémon…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setSearchTerm("")}
+              inputProps={{ "aria-label": "search" }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" aria-label="clear search" onClick={() => setSearchTerm("")}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </SearchPanel>
+        )}
+      </PanelArea>
+      <Snackbar
+        open={!!warning}
+        autoHideDuration={3000}
+        onClose={() => setWarning("")}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="warning" onClose={() => setWarning("")}>
+          {warning}
+        </Alert>
+      </Snackbar>
 
       <PokemonWrap ref={ref}>
         {stableSort(rows, getComparator(order, orderBy))
@@ -262,6 +335,7 @@ export default function Body({
                 collections={pokemonCollections}
                 showCollectionTags={showCollectionTags}
                 removePokemonFromCollection={removePokemonFromCollection}
+                showShiny={showShiny}
               />
             );
           })}

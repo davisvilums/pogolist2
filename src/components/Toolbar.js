@@ -1,242 +1,88 @@
-import { alpha } from "@mui/material/styles";
 import Box from "@mui/material/Box";
-import TableC from "@mui/material/Table";
-import TableCellC from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableContainer from "@mui/material/TableContainer";
-import TableRow from "@mui/material/TableRow";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
 import Chip from "@mui/material/Chip";
-import DeleteIcon from "@mui/icons-material/Delete";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import { styled } from "@mui/material/styles";
-import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import UndoIcon from "@mui/icons-material/Undo";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
-const Table = styled(TableC)`
-  width: initial;
-`;
-const TableCell = styled(TableCellC)`
-  border-bottom: none;
-`;
-const headCells = [
-  {
-    id: "cp",
-    numeric: true,
-    disablePadding: false,
-    label: "CP",
-  },
-  {
-    id: "name",
-    numeric: false,
-    disablePadding: true,
-    label: "Name",
-  },
-  {
-    id: "order",
-    numeric: true,
-    disablePadding: false,
-    label: "Order",
-  },
-  {
-    id: "familyOrder",
-    numeric: true,
-    disablePadding: false,
-    label: "Family",
-  },
-  {
-    id: "id",
-    numeric: true,
-    disablePadding: false,
-    label: "ID",
-  },
+const sortOptions = [
+  { id: "cp", label: "CP" },
+  { id: "name", label: "Name" },
+  { id: "order", label: "Order" },
+  { id: "familyOrder", label: "Family" },
+  { id: "id", label: "ID" },
 ];
 
-function EnhancedTableHead({ order, orderBy, onRequestSort }) {
-  const createSortHandler = (property) => (event) => {
-    onRequestSort(event, property);
-  };
-
+// Sort options as pills; the active one is filled and shows its direction
+function SortPills({ order, orderBy, onRequestSort }) {
   return (
-    <TableHead>
-      <TableRow>
-        <TableCell sx={{ display: { xs: "none", sm: "block" } }}>
-          Sort&nbsp;by:
-        </TableCell>
-        {headCells.map((headCell) => (
-          <TableCell
-            key={headCell.id}
-            align="right"
-            padding={headCell.disablePadding ? "none" : "normal"}
-            sortDirection={orderBy === headCell.id ? order : false}
-          >
-            <TableSortLabel
-              active={orderBy === headCell.id}
-              direction={orderBy === headCell.id ? order : "asc"}
-              onClick={createSortHandler(headCell.id)}
-            >
-              {headCell.label}
-            </TableSortLabel>
-          </TableCell>
-        ))}
-      </TableRow>
-    </TableHead>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5, display: { xs: "none", sm: "block" } }}>
+        Sort by:
+      </Typography>
+      {sortOptions.map(({ id, label }) => {
+        const active = orderBy === id;
+        const Arrow = order === "asc" ? ArrowUpwardIcon : ArrowDownwardIcon;
+        return (
+          <Chip
+            key={id}
+            label={label}
+            size="small"
+            clickable
+            color={active ? "primary" : "default"}
+            variant={active ? "filled" : "outlined"}
+            icon={active ? <Arrow fontSize="small" /> : undefined}
+            onClick={(event) => onRequestSort(event, id)}
+          />
+        );
+      })}
+    </Box>
   );
 }
 
-export default function ToolbarPoke(props) {
-  const {
-    numSelected,
-    rowCount,
-    handleSelectAllClick,
-    handleRequestSort,
-    warning,
-    order,
-    orderBy,
-    toggleFilters,
-    title,
-    lastAction,
-    handleUndo,
-    filterSets,
-    activeFilterSetId,
-    setActiveFilterSetId,
-    activeFilterSetMode,
-    setActiveFilterSetMode,
-  } = props;
-
+// Custom filter set chips: click cycles show -> exclude -> off
+export function FilterSetChips({
+  filterSets,
+  activeFilterSetId,
+  setActiveFilterSetId,
+  activeFilterSetMode,
+  setActiveFilterSetMode,
+}) {
+  if (!filterSets || filterSets.length === 0) return null;
   return (
-    <Toolbar
-      sx={{
-        pl: { xs: 1, sm: 3 },
-        pr: { xs: 1, sm: 3 },
-        ...(numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha(
-              theme.palette.primary.main,
-              theme.palette.action.activatedOpacity
-            ),
-        }),
-        flexWrap: { xs: "wrap", sm: "initial" },
-      }}
-    >
-      <Box sx={{ mr: "auto", display: "flex", alignItems: "center" }}>
-        {/* <Checkbox
-          color="primary"
-          indeterminate={numSelected > 0 && numSelected < rowCount}
-          checked={rowCount > 0 && numSelected === rowCount}
-          onChange={handleSelectAllClick}
-          inputProps={{
-            "aria-label": "select all desserts",
-          }}
-        /> */}
-        {warning ? (
-          <Alert severity="warning"> {warning}</Alert>
-        ) : numSelected > 0 ? (
-          <Typography color="inherit" variant="subtitle1" component="div">
-            {numSelected} selected
-          </Typography>
-        ) : (
-          <Typography variant="h6" id="tableTitle" component="div">
-            {title}
-          </Typography>
-        )}
-        {/* Show the visible pokemon count here */}
-        <Typography variant="body1" id="tableTitle" sx={{ m: "0 auto 0 20px" }}>
-          {rowCount}
-        </Typography>
-      </Box>
-      {filterSets && filterSets.length > 0 && (
-        <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mx: 1 }}>
-          {filterSets.map((fs) => {
-            const isActive = activeFilterSetId === fs.id;
-            const mode = isActive ? activeFilterSetMode : null;
-            return (
-              <Chip
-                key={fs.id}
-                label={fs.name}
-                size="small"
-                color={mode === "show" ? "primary" : mode === "exclude" ? "error" : "default"}
-                variant={isActive ? "filled" : "outlined"}
-                onClick={() => {
-                  if (!isActive) {
-                    setActiveFilterSetId(fs.id);
-                    setActiveFilterSetMode("show");
-                  } else if (mode === "show") {
-                    setActiveFilterSetMode("exclude");
-                  } else {
-                    setActiveFilterSetId(null);
-                    setActiveFilterSetMode("show");
-                  }
-                }}
-              />
-            );
-          })}
-        </Box>
-      )}
-      <Box
-        sx={{
-          ml: "auto",
-          order: { xs: 1, sm: "initial" },
-          width: { xs: "100%", sm: "initial" },
-        }}
-      >
-        <TableContainer>
-          <Table
-            aria-labelledby="tableTitle"
+    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", justifyContent: "flex-end", alignContent: "flex-start" }}>
+      {filterSets.map((fs) => {
+        const isActive = activeFilterSetId === fs.id;
+        const mode = isActive ? activeFilterSetMode : null;
+        return (
+          <Chip
+            key={fs.id}
+            label={fs.name}
             size="small"
-            sx={{
-              padding: "0 15px",
-              width: "inital !important",
-              border: "none",
+            color={mode === "show" ? "primary" : mode === "exclude" ? "error" : "default"}
+            variant={isActive ? "filled" : "outlined"}
+            onClick={() => {
+              if (!isActive) {
+                setActiveFilterSetId(fs.id);
+                setActiveFilterSetMode("show");
+              } else if (mode === "show") {
+                setActiveFilterSetMode("exclude");
+              } else {
+                setActiveFilterSetId(null);
+                setActiveFilterSetMode("show");
+              }
             }}
-          >
-            <EnhancedTableHead
-              numSelected={numSelected}
-              order={order}
-              orderBy={orderBy}
-              onSelectAllClick={handleSelectAllClick}
-              onRequestSort={handleRequestSort}
-              rowCount={rowCount}
-            />
-          </Table>
-        </TableContainer>
-      </Box>
+          />
+        );
+      })}
+    </Box>
+  );
+}
 
-      <Box sx={{ ml: 2, display: "flex", alignItems: "center" }}>
-        {numSelected > 0 ? (
-          <Tooltip title="Delete">
-            <IconButton>
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Filter list">
-            <IconButton onClick={toggleFilters}>
-              <FilterListIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-        {lastAction ? (
-          <Tooltip title="Undo last add">
-            <IconButton onClick={handleUndo}>
-              <UndoIcon />
-            </IconButton>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Undo last add">
-            <span>
-              <IconButton disabled>
-                <UndoIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-      </Box>
-    </Toolbar>
+// Sort panel shown below the app bar
+export default function SortPanel({ order, orderBy, onRequestSort }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: "100%", px: 2 }}>
+      <SortPills order={order} orderBy={orderBy} onRequestSort={onRequestSort} />
+    </Box>
   );
 }
