@@ -7,6 +7,8 @@ import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
+import AddIcon from "@mui/icons-material/Add";
+import Tooltip from "@mui/material/Tooltip";
 import { styled } from "@mui/material/styles";
 import PokemonCard from "./PokemonCard";
 import { TagFilters, EvolutionFilters, filtersList, runFilters } from "./TagFilters";
@@ -15,8 +17,10 @@ import {
   buildDescendants,
   getCollectionIds,
   applyEvolutionRules,
+  applyFamilyRules,
 } from "../data/evolution";
 import SortPanel, { FilterSetChips } from "./Toolbar";
+import { getOwnedIds, getExtraVariants, toggleOwned } from "../data/collections";
 import Pagination from "./Pagination";
 
 // Copies the app bar's responsive minHeight rules as `top` offsets
@@ -106,8 +110,11 @@ export default function Body({
   activePanel,
   searchTerm,
   setSearchTerm,
+  searchRelated,
+  setSearchRelated,
   showCollectionTags,
   showShiny,
+  variantMode,
   tagVisibility,
   removePokemonFromCollection,
   filterSets,
@@ -151,10 +158,17 @@ export default function Body({
     // Apply tag/generation filters
     pl = runFilters(pl, filters, showShiny);
 
-    // Apply search filter
+    // Apply search filter; with "+" on, matches bring in their whole evolution family
     if (searchTerm && searchTerm.trim()) {
       const search = searchTerm.toLowerCase().trim();
-      pl = pl.filter((item) => item.name.toLowerCase().includes(search));
+      const matches = pl.filter((item) => item.name.toLowerCase().includes(search));
+      if (searchRelated) {
+        const families = new Set(matches.map((item) => item.family).filter((f) => f !== undefined));
+        const matchIds = new Set(matches.map((item) => item.id));
+        pl = pl.filter((item) => matchIds.has(item.id) || families.has(item.family));
+      } else {
+        pl = matches;
+      }
     }
 
     // Apply per-collection visibility (show/hide)
@@ -163,12 +177,12 @@ export default function Body({
 
     if (showCols.length > 0) {
       const showIds = new Set();
-      showCols.forEach((c) => getCollectionIds(c, descendants).forEach((id) => showIds.add(id)));
+      showCols.forEach((c) => getCollectionIds(c, descendants, variantMode).forEach((id) => showIds.add(id)));
       pl = pl.filter((item) => showIds.has(item.id));
     }
     if (hideCols.length > 0) {
       const hideIds = new Set();
-      hideCols.forEach((c) => getCollectionIds(c, descendants).forEach((id) => hideIds.add(id)));
+      hideCols.forEach((c) => getCollectionIds(c, descendants, variantMode).forEach((id) => hideIds.add(id)));
       pl = pl.filter((item) => !hideIds.has(item.id));
     }
 
@@ -182,12 +196,12 @@ export default function Body({
         const effectiveInvert = activeFs.invert !== (activeFilterSetMode === "exclude");
         if (activeFs.mode === "and") {
           pl = pl.filter((item) => {
-            const inAll = fsShowCols.every((c) => c.pokemon && c.pokemon.includes(item.id));
+            const inAll = fsShowCols.every((c) => getOwnedIds(c, variantMode).includes(item.id));
             return effectiveInvert ? !inAll : inAll;
           });
         } else {
           const ids = new Set();
-          fsShowCols.forEach((c) => (c.pokemon || []).forEach((id) => ids.add(id)));
+          fsShowCols.forEach((c) => getOwnedIds(c, variantMode).forEach((id) => ids.add(id)));
           pl = pl.filter((item) =>
             effectiveInvert ? !ids.has(item.id) : ids.has(item.id)
           );
@@ -196,18 +210,19 @@ export default function Body({
 
       if (fsHideCols.length > 0) {
         const ids = new Set();
-        fsHideCols.forEach((c) => (c.pokemon || []).forEach((id) => ids.add(id)));
+        fsHideCols.forEach((c) => getOwnedIds(c, variantMode).forEach((id) => ids.add(id)));
         pl = pl.filter((item) => !ids.has(item.id));
       }
     }
 
     // Hide evolutions based on the evolution rules
+    pl = applyFamilyRules(pl, evolutionRules);
     const visibleIds = new Set(applyEvolutionRules(pl.map((p) => p.id), evolutionRules, ancestors));
     pl = pl.filter((p) => visibleIds.has(p.id));
 
     setRows(pl);
     setWarning("");
-  }, [filters, list, selected.pokemon, data, searchTerm, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, ancestors, descendants, showShiny]);
+  }, [filters, list, selected, data, searchTerm, searchRelated, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, ancestors, descendants, showShiny, variantMode]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -217,38 +232,24 @@ export default function Body({
 
   const handleClick = (event, id) => {
     if (selected.pokemon) {
-      const sl = { ...selected };
-      const pokemon = sl.pokemon;
-      const selectedIndex = pokemon.indexOf(id);
-      let newPokelist = [];
-
-      if (selectedIndex === -1) {
-        newPokelist = newPokelist.concat(pokemon, id);
-      } else if (selectedIndex === 0) {
-        newPokelist = newPokelist.concat(pokemon.slice(1));
-      } else if (selectedIndex === pokemon.length - 1) {
-        newPokelist = newPokelist.concat(pokemon.slice(0, -1));
-      } else if (selectedIndex > 0) {
-        newPokelist = newPokelist.concat(
-          pokemon.slice(0, selectedIndex),
-          pokemon.slice(selectedIndex + 1)
-        );
-      }
-      sl.pokemon = newPokelist;
-      setSelected(newPokelist);
+      // Hundo or variant hundo (shiny, Dynamax, both), depending on the active modes
+      setSelected(toggleOwned(selected, id, variantMode));
       setWarning("");
     } else {
       setWarning("Please select a collection to add pokemon");
     }
   };
 
-  // const isSelected = (id) => selected.pokemon.indexOf(id) !== -1 ? true: false;
-  const isSelected = (id) => {
-    if (!selected.pokemon) return false;
-    else return selected.pokemon.indexOf(id) !== -1;
-    // console.log(selected.pokemon);
-    // return 1;
-  };
+  const selectedIds = React.useMemo(
+    () => new Set(selected.pokemon ? getOwnedIds(selected, variantMode) : []),
+    [selected, variantMode]
+  );
+  const isSelected = (id) => selectedIds.has(id);
+  // When the selected collection is starred and every Pokemon on screen is in it,
+  // checkboxes and highlighting carry no information, so hide them. (Not just when
+  // everything happens to be selected, e.g. a search matching only selected Pokemon.)
+  const allSelected =
+    selected.visibility === "show" && rows.length > 0 && rows.every((row) => selectedIds.has(row.id));
 
   return (
     <Paper sx={{ width: "100%", mb: 2 }}>
@@ -274,6 +275,19 @@ export default function Body({
         )}
         {activePanel === "search" && (
           <SearchPanel>
+            <Tooltip
+              title={searchRelated ? "Showing whole evolution families" : "Include related Pokémon (whole evolution family)"}
+              enterDelay={600}
+              disableInteractive
+            >
+              <IconButton
+                aria-label="include related in search"
+                aria-pressed={searchRelated}
+                onClick={() => setSearchRelated(!searchRelated)}
+              >
+                <AddIcon sx={searchRelated ? { color: "warning.main" } : { opacity: 0.5 }} />
+              </IconButton>
+            </Tooltip>
             <TextField
               autoFocus
               size="small"
@@ -319,11 +333,14 @@ export default function Body({
             const isItemSelected = isSelected(row.id);
 
             const pokemonCollections = showCollectionTags
-              ? list.filter((c) =>
-                  c.pokemon &&
-                  c.pokemon.includes(row.id) &&
-                  tagVisibility[c.id] !== false
+              ? list.filter(
+                  (c) => getOwnedIds(c, variantMode).includes(row.id) && tagVisibility[c.id] !== false
                 )
+              : [];
+            // Badges for every variant it's owned as: the active mode's own (e.g. the
+            // Dynamax mark in Dynamax mode) plus any beyond it
+            const variantBadges = isItemSelected
+              ? [...(variantMode ? variantMode.split("+") : []), ...getExtraVariants(selected, row.id, variantMode)]
               : [];
 
             return (
@@ -332,6 +349,8 @@ export default function Body({
                 key={row.name}
                 select={(event) => handleClick(event, row.id)}
                 selected={isItemSelected}
+                showSelection={!allSelected}
+                variantBadges={variantBadges}
                 collections={pokemonCollections}
                 showCollectionTags={showCollectionTags}
                 removePokemonFromCollection={removePokemonFromCollection}

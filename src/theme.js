@@ -33,15 +33,25 @@ const lightPalette = {
   },
 };
 
+// Filter colours used everywhere (pills, chips, collection icons, filter sets):
+// warning (amber) = "only these", error (red) = "hide these", primary = included
+const filterPalette = (mode) => ({
+  warning: {
+    main: mode === 'dark' ? '#fbbf24' : '#f9a825',
+    contrastText: '#1f1600',
+  },
+  error: {
+    main: mode === 'dark' ? '#f87171' : red[700],
+  },
+});
+
 // A custom theme for this app, in "light" or "dark" mode
 export function createAppTheme(mode) {
   return createTheme({
     palette: {
       mode,
       ...(mode === 'dark' ? darkPalette : lightPalette),
-      error: {
-        main: red.A400,
-      },
+      ...filterPalette(mode),
     },
   });
 }

@@ -34,7 +34,9 @@ import {
   buildDescendants,
   getCollectionIds,
   applyEvolutionRules,
+  applyFamilyRules,
 } from "../data/evolution";
+import { getOwnedIds } from "../data/collections";
 
 import IconPlus from "@mui/icons-material/ControlPoint";
 import IconCross from "@mui/icons-material/CancelOutlined";
@@ -132,8 +134,8 @@ function SortableItem({
               <Tooltip
                 title={
                   item.related
-                    ? "Evolutions included"
-                    : "Include evolutions"
+                    ? "Evolutions included (single evolution paths only)"
+                    : "Include evolutions (single evolution paths only)"
                 }
                 {...rowTooltipProps}
               >
@@ -149,7 +151,7 @@ function SortableItem({
                   <AddIcon
                     sx={
                       item.related
-                        ? { color: item.visibility === "show" ? "#f9a825" : "#d32f2f" }
+                        ? { color: item.visibility === "show" ? "warning.main" : "error.main" }
                         : { opacity: 0.35 }
                     }
                   />
@@ -171,9 +173,9 @@ function SortableItem({
                 }}
               >
                 {item.visibility === "show" ? (
-                  <StarIcon sx={{ color: "#f9a825" }} />
+                  <StarIcon sx={{ color: "warning.main" }} />
                 ) : item.visibility === "hide" ? (
-                  <VisibilityOffIcon sx={{ color: "#d32f2f" }} />
+                  <VisibilityOffIcon sx={{ color: "error.main" }} />
                 ) : (
                   <CircleOutlinedIcon sx={{ opacity: 0.4 }} />
                 )}
@@ -237,7 +239,7 @@ const toNameList = (ids, pokemonData) => {
   return [...new Set(names)].sort((a, b) => a.localeCompare(b)).join(", ");
 };
 
-function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, visiblePokemonIds }) {
+function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId, activeFilterSetMode, evolutionRules, visiblePokemonIds, variantMode }) {
   const selectedCollection = list.find((item) => item.selected);
   const ancestors = useMemo(() => buildAncestors(pokemonData), [pokemonData]);
   const descendants = useMemo(() => buildDescendants(pokemonData), [pokemonData]);
@@ -255,12 +257,13 @@ function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId
 
     // Per-collection visibility, including related descendants
     const visShowCols = list.filter((c) => c.visibility === "show");
-    const visShowIds = new Set(visShowCols.flatMap((c) => getCollectionIds(c, descendants)));
+    const visShowIds = new Set(visShowCols.flatMap((c) => getCollectionIds(c, descendants, variantMode)));
     const visHideIds = new Set(
-      list.filter((c) => c.visibility === "hide").flatMap((c) => getCollectionIds(c, descendants))
+      list.filter((c) => c.visibility === "hide").flatMap((c) => getCollectionIds(c, descendants, variantMode))
     );
+    const owned = (c, id) => getOwnedIds(c, variantMode).includes(id);
 
-    const visibleIds = selectedCollection.pokemon
+    const visibleIds = getOwnedIds(selectedCollection, variantMode)
       .filter((id) => {
         if (visShowCols.length > 0 && !visShowIds.has(id)) return false;
         if (visHideIds.has(id)) return false;
@@ -272,14 +275,14 @@ function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId
         const showCols = list.filter((c) => active.filters[c.id] === "show");
         const hideCols = list.filter((c) => active.filters[c.id] === "hide");
 
-        if (hideCols.some((c) => c.pokemon && c.pokemon.includes(id))) return false;
+        if (hideCols.some((c) => owned(c, id))) return false;
 
         if (showCols.length > 0) {
           let inShow;
           if (active.mode === "and") {
-            inShow = showCols.every((c) => c.pokemon && c.pokemon.includes(id));
+            inShow = showCols.every((c) => owned(c, id));
           } else {
-            inShow = showCols.some((c) => c.pokemon && c.pokemon.includes(id));
+            inShow = showCols.some((c) => owned(c, id));
           }
           const effectiveInvert = active.invert !== (activeFilterSetMode === "exclude");
           return effectiveInvert ? !inShow : inShow;
@@ -288,7 +291,9 @@ function SelectedPokemonNames({ list, pokemonData, filterSets, activeFilterSetId
         return true;
       });
 
-    return toNameList(applyEvolutionRules(visibleIds, evolutionRules, ancestors), pokemonData);
+    const byId = new Map(pokemonData.map((p) => [p.id, p]));
+    const familyIds = applyFamilyRules(visibleIds.map((id) => byId.get(id)).filter(Boolean), evolutionRules).map((p) => p.id);
+    return toNameList(applyEvolutionRules(familyIds, evolutionRules, ancestors), pokemonData);
   };
 
   return (
@@ -358,9 +363,9 @@ function FilterSetEditor({ filterSet, list, filterSets, setFilterSets }) {
             >
               <IconButton size="small" onClick={() => cycleRole(col.id)}>
                 {role === "show" ? (
-                  <FilterAltIcon sx={{ color: "primary.main" }} />
+                  <FilterAltIcon sx={{ color: "warning.main" }} />
                 ) : role === "hide" ? (
-                  <VisibilityOffIcon sx={{ color: "#d32f2f" }} />
+                  <VisibilityOffIcon sx={{ color: "error.main" }} />
                 ) : (
                   <FilterAltOutlinedIcon sx={{ opacity: 0.3 }} />
                 )}
@@ -388,7 +393,7 @@ function FilterSetEditor({ filterSet, list, filterSets, setFilterSets }) {
           label="Invert"
           size="small"
           icon={<SwapHorizIcon />}
-          color={filterSet.invert ? "secondary" : "default"}
+          color={filterSet.invert ? "error" : "default"}
           variant={filterSet.invert ? "filled" : "outlined"}
           onClick={() => updateFilterSet({ invert: !filterSet.invert })}
         />
@@ -413,6 +418,7 @@ export default function Sidebar({
   setEditingFilterSetId,
   evolutionRules,
   visiblePokemonIds,
+  variantMode,
 }) {
   const [text, setText] = useState("");
   const [filterSetName, setFilterSetName] = useState("");
@@ -633,7 +639,7 @@ export default function Sidebar({
                   <Chip
                     label={activeFilterSetMode}
                     size="small"
-                    color={activeFilterSetMode === "show" ? "primary" : "error"}
+                    color={activeFilterSetMode === "show" ? "warning" : "error"}
                     sx={{ height: 20, fontSize: 11 }}
                   />
                 ) : null
@@ -702,6 +708,7 @@ export default function Sidebar({
         activeFilterSetMode={activeFilterSetMode}
         evolutionRules={evolutionRules}
         visiblePokemonIds={visiblePokemonIds}
+        variantMode={variantMode}
       />
       <List>
       </List>

@@ -270,7 +270,7 @@ async function main() {
     fs.writeFileSync(outputPath, JSON.stringify({ pokelist: pokeList }, null, 2));
 
     console.log(`\nGenerated pokelist.json with ${pokeList.length} Pokemon`);
-    console.log('Run scripts/add-family-order.js next to restore the Family sort order');
+    console.log('Next run: add-new-megas.js, add-costumes.js, add-family-order.js, update-availability.js');
 
     // Stats
     const maxId = Math.max(...pokeList.filter(p => p.id < 10000).map(p => p.id));

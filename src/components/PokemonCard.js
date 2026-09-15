@@ -1,6 +1,8 @@
 import * as React from "react";
 import { styled, alpha } from "@mui/material/styles";
 import Check from "@mui/icons-material/CheckBox";
+import AutoAwesome from "@mui/icons-material/AutoAwesome";
+import DynamaxIcon, { DYNAMAX_COLOR } from "./DynamaxIcon";
 
 const PokemonItem = styled("div")`
   border: 1px solid ${({ theme }) => theme.palette.divider};
@@ -53,6 +55,35 @@ const PokemonSpriteWrap = styled("div")`
     }
   }
 `;
+
+// Crops a sprite to its visible area ([x, y, width, height] within the 256px
+// image) and scales it to fill the card, for costume images with lots of padding
+const SPRITE_SIZE = 256;
+const CropBox = styled("div")`
+  position: relative;
+  overflow: hidden;
+  /* Sits at the bottom so the #id and generation labels above stay readable */
+  margin-top: auto;
+  & img {
+    position: absolute;
+    max-width: none;
+    max-height: none;
+  }
+`;
+
+function CroppedSprite({ box, ...imgProps }) {
+  const [x, y, width, height] = box;
+  const scale = Math.min(92 / width, 84 / height, 3);
+  return (
+    <CropBox style={{ width: width * scale, height: height * scale }}>
+      <img
+        {...imgProps}
+        alt=""
+        style={{ width: SPRITE_SIZE * scale, left: -x * scale, top: -y * scale }}
+      />
+    </CropBox>
+  );
+}
 
 const PokemonMeta = styled("div")`
   background-color: ${({ theme }) => theme.palette.action.hover};
@@ -119,7 +150,7 @@ function getShinySprite(sprite) {
   return sprite.replace(/\/([^/]+\.png)$/, "/shiny/$1");
 }
 
-function PokemonCard({ pokemon, selected, select, collections, showCollectionTags, removePokemonFromCollection, showShiny }) {
+function PokemonCard({ pokemon, selected, showSelection = true, variantBadges = [], select, collections, showCollectionTags, removePokemonFromCollection, showShiny }) {
   var TitleSize = "15px";
 
   if (pokemon.name.length > 15) {
@@ -130,25 +161,36 @@ function PokemonCard({ pokemon, selected, select, collections, showCollectionTag
     TitleSize = "14px";
   }
 
+  const spriteProps = {
+    src: showShiny ? pokemon.shinySprite || getShinySprite(pokemon.sprite) : pokemon.sprite,
+    onError: (e) => {
+      // Fall back to the regular sprite when no shiny version exists
+      if (showShiny && e.currentTarget.src !== pokemon.sprite) {
+        e.currentTarget.src = pokemon.sprite;
+      }
+    },
+  };
+
   return (
-    <PokemonItem className={selected ? "selected" : ""}>
+    <PokemonItem className={selected && showSelection ? "selected" : ""}>
       {/* {selected} */}
       <PokemonID>#{pokemon.id}</PokemonID>
       {/* Only the picture and the G/checkbox badge select; the text stays selectable */}
       <PokemonGeneration onClick={select}>
-        {selected ? <Check color="primary" /> : "G" + pokemon.gen}
+        {variantBadges.includes("dynamax") && (
+          <DynamaxIcon sx={{ fontSize: 15, color: DYNAMAX_COLOR, verticalAlign: "top", mt: "4px" }} />
+        )}
+        {variantBadges.includes("shiny") && (
+          <AutoAwesome sx={{ fontSize: 16, color: "#ffc107", verticalAlign: "top", mt: "3px" }} />
+        )}
+        {selected && showSelection ? <Check color="primary" /> : "G" + pokemon.gen}
       </PokemonGeneration>
       <PokemonSpriteWrap onClick={select}>
-        <img
-          src={showShiny ? getShinySprite(pokemon.sprite) : pokemon.sprite}
-          alt=""
-          onError={(e) => {
-            // Fall back to the regular sprite when no shiny version exists
-            if (showShiny && e.currentTarget.src !== pokemon.sprite) {
-              e.currentTarget.src = pokemon.sprite;
-            }
-          }}
-        />
+        {pokemon.spriteBox ? (
+          <CroppedSprite box={pokemon.spriteBox} {...spriteProps} />
+        ) : (
+          <img alt="" {...spriteProps} />
+        )}
       </PokemonSpriteWrap>
 
       <PokemonMeta>

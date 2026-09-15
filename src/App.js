@@ -15,9 +15,10 @@ import Body from "./components/Body";
 import Tooltip from "@mui/material/Tooltip";
 import GetDataGrahp from "./data/GetDataGrahp";
 import { defaultEvolutionRules } from "./data/evolution";
+import { removeOwned, variantModeKey } from "./data/collections";
 
 // Data version - increment this when pokelist.json structure changes
-const DATA_VERSION = 25;
+const DATA_VERSION = 29;
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open, width }) => ({
@@ -83,12 +84,20 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
   });
   const [lastAction, setLastAction] = React.useState(null);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [searchRelated, setSearchRelated] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("searchRelated")) || false;
+  });
   const [showCollectionTags, setShowCollectionTags] = React.useState(() => {
     return JSON.parse(localStorage.getItem("showCollectionTags")) || false;
   });
   const [showShiny, setShowShiny] = React.useState(() => {
     return JSON.parse(localStorage.getItem("showShiny")) || false;
   });
+  const [showDynamax, setShowDynamax] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("showDynamax")) || false;
+  });
+  // Which variant hundos collections refer to: "", "shiny", "dynamax" or "dynamax+shiny"
+  const variantMode = variantModeKey({ shiny: showShiny, dynamax: showDynamax });
   const [tagVisibility, setTagVisibility] = React.useState(() => {
     return JSON.parse(localStorage.getItem("tagVisibility")) || {};
   });
@@ -163,65 +172,45 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
   const handleDrawerOpen = () => {
     setOpen(true);
   };
-  const updateSelected = (l) => {
+  // Receives the selected collection's new { pokemon, variants } lists
+  const updateSelected = (lists) => {
     const selectedIndex = list.findIndex((o) => o.selected === true);
 
     if (selectedIndex !== -1) {
-      const oldPokemonList = list[selectedIndex].pokemon;
+      const previous = list[selectedIndex];
+      const total = (c) =>
+        (c.pokemon || []).length +
+        (c.shiny || []).length +
+        Object.values(c.variants || {}).reduce((sum, ids) => sum + ids.length, 0);
+      // Undo restores the lists from before the last add
+      setLastAction(
+        total(lists) > total(previous)
+          ? {
+              type: "add",
+              collectionIndex: selectedIndex,
+              previous: { pokemon: previous.pokemon, variants: previous.variants, shiny: previous.shiny },
+            }
+          : null
+      );
 
-      if (l.length > oldPokemonList.length) {
-        const added = l.filter((p) => !oldPokemonList.includes(p));
-        if (added.length > 0) {
-          setLastAction({
-            type: "add",
-            pokemonId: added[0],
-            collectionIndex: selectedIndex,
-          });
-        }
-      } else {
-        setLastAction(null);
-      }
-
-      const newList = list.map((item, index) => {
-        if (index === selectedIndex) {
-          return { ...item, pokemon: l };
-        }
-        return item;
-      });
-      setList(newList);
+      setList(list.map((item, index) => (index === selectedIndex ? { ...item, ...lists } : item)));
     }
   };
 
   const handleUndo = () => {
     if (lastAction && lastAction.type === "add") {
-      const { pokemonId, collectionIndex } = lastAction;
-
-      const newList = list.map((item, index) => {
-        if (index === collectionIndex) {
-          return {
-            ...item,
-            pokemon: item.pokemon.filter((id) => id !== pokemonId),
-          };
-        }
-        return item;
-      });
-
-      setList(newList);
+      const { previous, collectionIndex } = lastAction;
+      setList(list.map((item, index) => (index === collectionIndex ? { ...item, ...previous } : item)));
       setLastAction(null); // Only one undo.
     }
   };
 
   const removePokemonFromCollection = (pokemonId, collectionId) => {
-    const newList = list.map((item) => {
-      if (item.id === collectionId) {
-        return {
-          ...item,
-          pokemon: item.pokemon.filter((id) => id !== pokemonId),
-        };
-      }
-      return item;
-    });
-    setList(newList);
+    setList(
+      list.map((item) =>
+        item.id === collectionId ? { ...item, ...removeOwned(item, pokemonId, variantMode) } : item
+      )
+    );
   };
 
   React.useEffect(() => {
@@ -231,6 +220,14 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
   React.useEffect(() => {
     localStorage.setItem("showShiny", JSON.stringify(showShiny));
   }, [showShiny]);
+
+  React.useEffect(() => {
+    localStorage.setItem("showDynamax", JSON.stringify(showDynamax));
+  }, [showDynamax]);
+
+  React.useEffect(() => {
+    localStorage.setItem("searchRelated", JSON.stringify(searchRelated));
+  }, [searchRelated]);
 
   React.useEffect(() => {
     localStorage.setItem("tagVisibility", JSON.stringify(tagVisibility));
@@ -296,6 +293,8 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
         setShowCollectionTags={setShowCollectionTags}
         showShiny={showShiny}
         setShowShiny={setShowShiny}
+        showDynamax={showDynamax}
+        setShowDynamax={setShowDynamax}
         themeMode={themeMode}
         toggleThemeMode={toggleThemeMode}
         lastAction={lastAction}
@@ -350,6 +349,7 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
           setEditingFilterSetId={setEditingFilterSetId}
           evolutionRules={evolutionRules}
           visiblePokemonIds={visiblePokemonIds}
+          variantMode={variantMode}
         />
       </Drawer>
       <Main open={open} width={drawerWidth}>
@@ -363,8 +363,11 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
             activePanel={activePanel}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            searchRelated={searchRelated}
+            setSearchRelated={setSearchRelated}
             showCollectionTags={showCollectionTags}
             showShiny={showShiny}
+            variantMode={variantMode}
             tagVisibility={tagVisibility}
             removePokemonFromCollection={removePokemonFromCollection}
             filterSets={filterSets}

@@ -15,6 +15,7 @@ import SortIcon from "@mui/icons-material/Sort";
 import UndoIcon from "@mui/icons-material/Undo";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import DynamaxIcon, { DYNAMAX_COLOR } from "./DynamaxIcon";
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -63,6 +64,8 @@ export default function Header(props) {
     setShowCollectionTags,
     showShiny,
     setShowShiny,
+    showDynamax,
+    setShowDynamax,
     lastAction,
     handleUndo,
     themeMode,
@@ -127,6 +130,22 @@ export default function Header(props) {
                 sx={{
                   opacity: showShiny ? 1 : 0.5,
                   color: showShiny ? "#ffd54f" : "inherit",
+                }}
+              />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={showDynamax ? "Show regular hundos" : "Show Dynamax hundos"}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle dynamax"
+              aria-pressed={showDynamax}
+              onClick={() => setShowDynamax(!showDynamax)}
+              sx={{ mr: 1 }}
+            >
+              <DynamaxIcon
+                sx={{
+                  opacity: showDynamax ? 1 : 0.5,
+                  color: showDynamax ? DYNAMAX_COLOR : "inherit",
                 }}
               />
             </IconButton>

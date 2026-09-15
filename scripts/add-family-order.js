@@ -179,6 +179,9 @@ const TRANSFORMATION_PARENTS = {
   'terapagos-stellar': ['terapagos-terastal'],
 };
 
+// Forms sorted in this order within a species (Pumpkaboo and Gourgeist sizes)
+const FORM_ORDER = ['small', 'average', 'large', 'super'];
+
 // Megas, Primals, Gmax and totems come from the same species' regular form
 const SPECIAL_FORM = /(^|-)(mega(-[xyz])?|primal|gmax|totem)(?=-|$)/;
 const REGIONAL_FORM = /(^|-)(alola|galar|hisui|paldea)(-|$)/;
@@ -250,6 +253,41 @@ function linkEvolutions(pokelist, speciesOf, species) {
   }
 }
 
+// `family` (evolution chain id) and `familyFlags` for the app's family filters:
+// "branching" when a Pokemon in the family can evolve more than one way (Megas,
+// Gmax and totems don't count), "regional" when the family has a regional form
+function addFamilyFlags(pokelist, speciesOf, species) {
+  const chainOf = new Map(species.map((s) => [s.id, s.evolution_chain_id ?? `solo-${s.id}`]));
+  const byId = new Map(pokelist.map((e) => [e.id, e]));
+  const evolutionCount = new Map();
+  pokelist.forEach((e) => {
+    if (SPECIAL_FORM.test(e.form || '')) return;
+    (e.evolvesFrom || []).forEach((parent) => evolutionCount.set(parent, (evolutionCount.get(parent) || 0) + 1));
+  });
+
+  const flags = new Map();
+  const flag = (chain, name) => {
+    if (!flags.has(chain)) flags.set(chain, new Set());
+    flags.get(chain).add(name);
+  };
+  pokelist.forEach((e) => {
+    const chain = chainOf.get(speciesOf.get(e));
+    if (chain === undefined || e.costume) return;
+    if ((evolutionCount.get(e.id) || 0) > 1) flag(chain, 'branching');
+    if (REGIONAL_FORM.test(e.form || '')) flag(chain, 'regional');
+  });
+
+  pokelist.forEach((e) => {
+    const chain = chainOf.get(speciesOf.get(e));
+    if (chain === undefined) return;
+    e.family = chain;
+    const entryFlags = [...(flags.get(chain) || [])].sort();
+    if (entryFlags.length) e.familyFlags = entryFlags;
+    else delete e.familyFlags;
+  });
+  return byId;
+}
+
 function findSpeciesId(entry, pokemonSpecies, formPokemon) {
   if (entry.costume) return entry.dex; // costumes (add-costumes.js) already know their species
   if (pokemonSpecies.has(entry.id)) return pokemonSpecies.get(entry.id);
@@ -299,6 +337,7 @@ async function main() {
   });
 
   linkEvolutions(pokelist, speciesOf, data.pokemon_v2_pokemonspecies);
+  addFamilyFlags(pokelist, speciesOf, data.pokemon_v2_pokemonspecies);
 
   // How many steps a form is from its species' first form (Zygarde 10% -> 50% ->
   // Complete, Charizard -> Mega), so forms sort in stage order
@@ -312,12 +351,19 @@ async function main() {
     return 1 + Math.max(...sameSpeciesParents.map((p) => stageInSpecies(p, seen)));
   };
   keyed.forEach((k) => (k.stage = stageInSpecies(k.entry)));
+  // Forms with a natural order (sizes) sort by it instead of the default form first
+  // (costumes carry the size in their asset name, e.g. "pm710.fLARGE.cFALL_2022")
+  keyed.forEach((k) => {
+    const costumeForm = ((k.entry.costume || '').match(/\.f([A-Za-z]+)\./) || [])[1];
+    k.formRank = FORM_ORDER.indexOf(k.entry.form || (costumeForm || '').toLowerCase());
+  });
 
   keyed.sort(
     (a, b) =>
       a.speciesRank - b.speciesRank ||
       a.isCostume - b.isCostume ||
       a.stage - b.stage ||
+      a.formRank - b.formRank ||
       a.isDefault - b.isDefault ||
       a.entry.id - b.entry.id
   );

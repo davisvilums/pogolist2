@@ -58,7 +58,7 @@ export function FilterSetChips({
             key={fs.id}
             label={fs.name}
             size="small"
-            color={mode === "show" ? "primary" : mode === "exclude" ? "error" : "default"}
+            color={mode === "show" ? "warning" : mode === "exclude" ? "error" : "default"}
             variant={isActive ? "filled" : "outlined"}
             onClick={() => {
               if (!isActive) {

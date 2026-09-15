@@ -16,6 +16,7 @@ const defaultFilters = {
   totem: false,
   build: false,
   variants: false,
+  costume: false,
   g1: true,
   g2: true,
   g3: true,
@@ -25,7 +26,16 @@ const defaultFilters = {
   g7: true,
   g8: true,
   g9: true,
+  // The one pill set to "only" (or null)
+  only: null,
 };
+
+const chipKeys = Object.keys(defaultFilters).filter((key) => key !== "only");
+
+// Pills belong to groups; "only" replaces its own group's on/off pills
+const STATUS = ["released", "unreleased"];
+const KINDS = ["normal", "legendary", "mythical", "ultra", "mega", "baby", "gmax", "totem", "build", "variants"];
+const GENERATIONS = ["g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9"];
 
 // Load filters from localStorage or use defaults
 const getStoredFilters = () => {
@@ -34,9 +44,11 @@ const getStoredFilters = () => {
     if (stored) {
       // Only keep known filters, so renamed or removed ones don't linger as chips
       const parsed = JSON.parse(stored);
-      return Object.fromEntries(
+      const filters = Object.fromEntries(
         Object.keys(defaultFilters).map((key) => [key, key in parsed ? parsed[key] : defaultFilters[key]])
       );
+      if (!chipKeys.includes(filters.only) || filters.only === "costume") filters.only = null;
+      return filters;
     }
   } catch (e) {
     console.error("Error loading filters from localStorage:", e);
@@ -48,43 +60,38 @@ const filtersList = getStoredFilters();
 
 // With shiny sprites on, "released"/"unreleased" refer to the shiny being out
 const runFilters = (pl, filters, showShiny) => {
+  if (!filters) return pl;
   const isReleased = (p) => (showShiny ? p.shinyReleased : p.released);
-  // console.log(pl, filters);
-  if (filters) {
-    if (!filters["normal"]) pl = pl.filter((p) => p.tags && p.tags.length);
-    if (!filters["mega"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("mega"));
-    if (!filters["gmax"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("gmax"));
-    if (!filters["totem"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("totem"));
-    if (!filters["build"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("build"));
-    // Hides Unown letters and Minior colours; the regular Unown and red Minior stay
-    if (!filters["variants"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("variants"));
-    if (!filters["legendary"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("legendary"));
-    if (!filters["mythical"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("mythical"));
-    if (!filters["ultra"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("ultra"));
-    if (!filters["baby"])
-      pl = pl.filter((p) => p.tags && !p.tags.includes("baby"));
-    if (!filters["unreleased"]) pl = pl.filter((p) => isReleased(p));
-    if (!filters["released"]) pl = pl.filter((p) => !isReleased(p));
-    if (!filters["g1"]) pl = pl.filter((p) => p.gen !== 1);
-    if (!filters["g2"]) pl = pl.filter((p) => p.gen !== 2);
-    if (!filters["g3"]) pl = pl.filter((p) => p.gen !== 3);
-    if (!filters["g4"]) pl = pl.filter((p) => p.gen !== 4);
-    if (!filters["g5"]) pl = pl.filter((p) => p.gen !== 5);
-    if (!filters["g6"]) pl = pl.filter((p) => p.gen !== 6);
-    if (!filters["g7"]) pl = pl.filter((p) => p.gen !== 7);
-    if (!filters["g8"]) pl = pl.filter((p) => p.gen !== 8);
-    if (!filters["g9"]) pl = pl.filter((p) => p.gen !== 9);
-  }
+  const hasTag = (p, tag) => !!(p.tags && p.tags.includes(tag));
+  // Whether a Pokemon belongs to a pill
+  const matches = (p, key) => {
+    if (key === "released") return isReleased(p);
+    if (key === "unreleased") return !isReleased(p);
+    if (key === "normal") return !(p.tags && p.tags.length);
+    if (GENERATIONS.includes(key)) return p.gen === Number(key.slice(1));
+    return hasTag(p, key);
+  };
+  const only = filters.only;
+  const groupOf = (key) => [STATUS, KINDS, GENERATIONS].find((group) => group.includes(key));
+
+  // Costume works as a mode: on shows only costumes, off hides them
+  pl = pl.filter((p) => !!filters.costume === hasTag(p, "costume"));
+
+  // "Only" pill: keep just its Pokemon, and its group's other pills don't apply
+  if (only) pl = pl.filter((p) => matches(p, only));
+  [STATUS, KINDS, GENERATIONS]
+    .filter((group) => group !== groupOf(only))
+    .forEach((group) =>
+      group
+        .filter((key) => !filters[key])
+        .forEach((key) => {
+          pl = pl.filter((p) => !matches(p, key));
+        })
+    );
   return pl;
 };
+
+const pillTooltip = { on: "Shown · click to hide", off: "Hidden · click to show only these", only: "Showing only these · click to include normally" };
 
 const TagFilters = ({ filtersList, setFilters, children }) => {
   const [filters, setFilter] = useState(filtersList);
@@ -99,14 +106,18 @@ const TagFilters = ({ filtersList, setFilters, children }) => {
     }
   }, [filters, setFilters]);
 
-  const handleClick = (value) => {
-    const nf = Object.assign({}, filters);
-    nf[value] = !filters[value];
-    setFilter(nf);
+  // Pills cycle on -> off -> only -> on; costume has no "only" (it is already a mode)
+  const handleClick = (key) => {
+    setFilter((current) => {
+      if (current.only === key) return { ...current, only: null, [key]: true };
+      if (current[key] || key === "costume") return { ...current, [key]: !current[key] };
+      return { ...current, only: key };
+    });
   };
 
+  const stateOf = (key) => (filters.only === key ? "only" : filters[key] ? "on" : "off");
+
   return (
-    // <Stack direction="row" spacing={1}>
     <Box
       sx={{
         display: "flex",
@@ -114,23 +125,37 @@ const TagFilters = ({ filtersList, setFilters, children }) => {
         flexWrap: "wrap",
       }}
     >
-      {filters &&
-        Object.keys(filters).map((f) => (
-          <Chip
-            key={f}
-            label={f}
-            size="small"
-            clickable
-            color={filters[f] ? "primary" : "default"}
-            onClick={() => handleClick(f)}
-            sx={{ margin: "2px" }}
-          />
-        ))}
+      {chipKeys.map((key) => {
+        const state = stateOf(key);
+        return (
+          <Tooltip key={key} title={key === "costume" ? "" : pillTooltip[state]} enterDelay={800} disableInteractive>
+            <Chip
+              label={state === "only" ? `only ${key}` : key}
+              size="small"
+              clickable
+              // costume is a mode: when on it shows only costumes, so it uses the "only" colour
+              color={state === "only" || (key === "costume" && state === "on") ? "warning" : state === "on" ? "primary" : "default"}
+              onClick={() => handleClick(key)}
+              sx={{ margin: "2px" }}
+            />
+          </Tooltip>
+        );
+      })}
       {children}
     </Box>
   );
 };
 const evolutionFilterOptions = [
+  {
+    key: "branchingFamilies",
+    label: "branching evolutions",
+    tooltip: "Only families where a Pokémon can evolve more than one way",
+  },
+  {
+    key: "regionalFamilies",
+    label: "regional forms",
+    tooltip: "Only families with an Alolan, Galarian, Hisuian or Paldean form",
+  },
   {
     key: "lowestStageOnly",
     label: "lowest stage only",
@@ -147,8 +172,8 @@ const EvolutionFilters = ({ rules, setRules }) =>
         size="small"
         clickable
         variant={rules[key] ? "filled" : "outlined"}
-        color={rules[key] ? "secondary" : "default"}
-        onClick={() => setRules({ ...rules, [key]: !rules[key] })}
+        color={rules[key] ? "warning" : "default"}
+        onClick={() => setRules((current) => ({ ...current, [key]: !current[key] }))}
         sx={{ margin: "2px" }}
       />
     </Tooltip>

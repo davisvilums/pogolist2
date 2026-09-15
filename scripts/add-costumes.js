@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { ASSET_URL, parseAssetName, isCostumeForm, isCostumeAsset } = require('./costumes');
+const { ASSET_URL, parseAssetName, isCostumeForm, isCostumeAsset, pngVisibleBox } = require('./costumes');
 
 // Adds costume Pokemon (event hats, outfits, clones...) to pokelist.json, tagged
 // "costume". Costumes come from the GO game master (pokemon-go-api) plus Leek Duck's
@@ -17,8 +17,19 @@ const FIRST_COSTUME_ID = 30001;
 
 const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
 
-// Friendlier names for a few costume codes
+// Friendlier names for costume codes Leek Duck has no name for
 const LABELS = { COPY_2019: 'clone', A: 'armored' };
+
+// Asset files whose regular and shiny images are spelled differently
+const SPRITE_OVERRIDES = { 'pm133.cMAY_2023': 'pm133.cMay_2023' };
+
+const slug = (text) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f'’]/g, '') // accents and apostrophes: "New Year's", "PokÉxciting"
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 
 async function getJSON(url) {
   const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (personal pokedex updater)' } });
@@ -31,7 +42,7 @@ function costumeLabel({ form, costume }) {
   const parts = [];
   if (form) parts.push(LABELS[form] || form);
   if (costume) parts.push(LABELS[costume] || costume.replace(/_NOEVOLVE$/, ''));
-  return parts.join('-').toLowerCase().replace(/_/g, '-');
+  return slug(parts.join('-'));
 }
 
 // The regular entry a costume is based on: same dex, matching regional form if any
@@ -55,6 +66,10 @@ async function main() {
   // wins because it matches the asset file names.
   const costumes = new Map();
   const keyOf = (name) => name.replace(/\.g2$/, '').toUpperCase();
+  // Leek Duck's readable costume names, e.g. "Safari Hat"
+  const displayNames = new Map(
+    shinies.filter((s) => s.name_suffix).map((s) => [keyOf(s.aa_fn), s.name_suffix])
+  );
   for (const species of pokedex) {
     for (const asset of species.assetForms || []) {
       const name = `pm${species.dexNr}${asset.form ? `.f${asset.form}` : ''}${asset.costume ? `.c${asset.costume}` : ''}`;
@@ -84,10 +99,14 @@ async function main() {
       continue;
     }
     const speciesName = base.form ? base.name.slice(0, -(base.form.length + 1)) : base.name;
-    // Names must be unique (cards are keyed by name): mark non-evolving twins, then number
-    let name = `${speciesName}-${costumeLabel(parsed)}`;
+    // Names must be unique (cards are keyed by name): readable name first, then with
+    // the event code, then mark non-evolving twins, then number
+    const code = costumeLabel(parsed);
+    const readable = displayNames.has(key) ? slug(displayNames.get(key)) : code;
+    let name = `${speciesName}-${readable}`;
+    if (usedNames.has(name) && readable !== code) name = `${speciesName}-${readable}-${code}`;
     if (usedNames.has(name) && /_NOEVOLVE$/.test(parsed.costume)) name += '-no-evolve';
-    for (let n = 2; usedNames.has(name); n++) name = `${speciesName}-${costumeLabel(parsed)}-${n}`;
+    for (let n = 2; usedNames.has(name); n++) name = `${speciesName}-${readable}-${n}`;
     usedNames.add(name);
     pokelist.push({
       cp: base.cp,
@@ -99,7 +118,7 @@ async function main() {
       tags: [...base.tags.filter((t) => !['variants', 'build', 'totem'].includes(t)), 'costume'],
       visible: true,
       released: true,
-      sprite: `${ASSET_URL}/${assetName}.icon.png`,
+      sprite: `${ASSET_URL}/${SPRITE_OVERRIDES[assetName] || assetName}.icon.png`,
       shinySprite: `${ASSET_URL}/${assetName}.s.icon.png`,
       selected: false,
       dex: parsed.dex,
@@ -107,6 +126,28 @@ async function main() {
     });
     added++;
   }
+
+  // Costume images have lots of empty space; measure the visible area of the regular
+  // and shiny image so cards can crop to it (spriteBox: [x, y, width, height])
+  const unmeasured = pokelist.filter((p) => p.costume && !p.spriteBox);
+  const measure = async (url) => {
+    const res = await fetch(url);
+    return res.ok ? pngVisibleBox(Buffer.from(await res.arrayBuffer())) : null;
+  };
+  for (let i = 0; i < unmeasured.length; i += 16) {
+    await Promise.all(
+      unmeasured.slice(i, i + 16).map(async (entry) => {
+        const boxes = (await Promise.all([measure(entry.sprite), measure(entry.shinySprite)])).filter(Boolean);
+        if (!boxes.length) return;
+        const x = Math.min(...boxes.map((b) => b[0]));
+        const y = Math.min(...boxes.map((b) => b[1]));
+        const right = Math.max(...boxes.map((b) => b[0] + b[2]));
+        const bottom = Math.max(...boxes.map((b) => b[1] + b[3]));
+        entry.spriteBox = [x, y, right - x, bottom - y];
+      })
+    );
+  }
+  console.log(`Measured image bounds for ${unmeasured.length} costumes`);
 
   pokelist.sort((a, b) => b.cp - a.cp);
   fs.writeFileSync(POKELIST_PATH, JSON.stringify(file, null, 2));
