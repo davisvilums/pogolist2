@@ -16,6 +16,7 @@ import Tooltip from "@mui/material/Tooltip";
 import GetDataGrahp from "./data/GetDataGrahp";
 import { defaultEvolutionRules } from "./data/evolution";
 import { removeOwned, variantModeKey } from "./data/collections";
+import { filtersList, cycleFilter, filterState } from "./components/TagFilters";
 
 // Data version - increment this when pokelist.json structure changes
 const DATA_VERSION = 29;
@@ -96,13 +97,18 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
   const [showDynamax, setShowDynamax] = React.useState(() => {
     return JSON.parse(localStorage.getItem("showDynamax")) || false;
   });
+  const [showShadow, setShowShadow] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("showShadow")) || false;
+  });
   // Which variant hundos collections refer to: "", "shiny", "dynamax" or "dynamax+shiny"
-  const variantMode = variantModeKey({ shiny: showShiny, dynamax: showDynamax });
+  const variantMode = variantModeKey({ shiny: showShiny, dynamax: showDynamax, shadow: showShadow });
   const [tagVisibility, setTagVisibility] = React.useState(() => {
     return JSON.parse(localStorage.getItem("tagVisibility")) || {};
   });
   const [visiblePokemonIds, setVisiblePokemonIds] = React.useState([]);
   // Which sticky panel shows below the app bar: "info", "filters", "search" or none
+  // Tag filters live here so the header's costume button and the filter pills share them
+  const [filters, setFilters] = React.useState(filtersList);
   const [activePanel, setActivePanel] = React.useState(() => {
     const stored = localStorage.getItem("activePanel");
     return stored === null ? "info" : stored || null;
@@ -226,6 +232,18 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
   }, [showDynamax]);
 
   React.useEffect(() => {
+    localStorage.setItem("showShadow", JSON.stringify(showShadow));
+  }, [showShadow]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("pokemonFilters", JSON.stringify(filters));
+    } catch (e) {
+      console.error("Error saving filters to localStorage:", e);
+    }
+  }, [filters]);
+
+  React.useEffect(() => {
     localStorage.setItem("searchRelated", JSON.stringify(searchRelated));
   }, [searchRelated]);
 
@@ -295,6 +313,10 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
         setShowShiny={setShowShiny}
         showDynamax={showDynamax}
         setShowDynamax={setShowDynamax}
+        showShadow={showShadow}
+        setShowShadow={setShowShadow}
+        costumeState={filterState(filters, "costume")}
+        cycleCostume={() => setFilters((current) => cycleFilter(current, "costume"))}
         themeMode={themeMode}
         toggleThemeMode={toggleThemeMode}
         lastAction={lastAction}
@@ -361,6 +383,8 @@ export default function PersistentDrawerLeft({ themeMode, toggleThemeMode }) {
             selected={selected}
             setSelected={updateSelected}
             activePanel={activePanel}
+            filters={filters}
+            setFilters={setFilters}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             searchRelated={searchRelated}

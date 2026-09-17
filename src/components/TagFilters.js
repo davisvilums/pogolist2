@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
@@ -34,7 +33,7 @@ const chipKeys = Object.keys(defaultFilters).filter((key) => key !== "only");
 
 // Pills belong to groups; "only" replaces its own group's on/off pills
 const STATUS = ["released", "unreleased"];
-const KINDS = ["normal", "legendary", "mythical", "ultra", "mega", "baby", "gmax", "totem", "build", "variants"];
+const KINDS = ["normal", "legendary", "mythical", "ultra", "mega", "baby", "gmax", "totem", "build", "variants", "costume"];
 const GENERATIONS = ["g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9"];
 
 // Load filters from localStorage or use defaults
@@ -47,7 +46,7 @@ const getStoredFilters = () => {
       const filters = Object.fromEntries(
         Object.keys(defaultFilters).map((key) => [key, key in parsed ? parsed[key] : defaultFilters[key]])
       );
-      if (!chipKeys.includes(filters.only) || filters.only === "costume") filters.only = null;
+      if (!chipKeys.includes(filters.only)) filters.only = null;
       return filters;
     }
   } catch (e) {
@@ -74,9 +73,6 @@ const runFilters = (pl, filters, showShiny) => {
   const only = filters.only;
   const groupOf = (key) => [STATUS, KINDS, GENERATIONS].find((group) => group.includes(key));
 
-  // Costume works as a mode: on shows only costumes, off hides them
-  pl = pl.filter((p) => !!filters.costume === hasTag(p, "costume"));
-
   // "Only" pill: keep just its Pokemon, and its group's other pills don't apply
   if (only) pl = pl.filter((p) => matches(p, only));
   [STATUS, KINDS, GENERATIONS]
@@ -93,29 +89,18 @@ const runFilters = (pl, filters, showShiny) => {
 
 const pillTooltip = { on: "Shown · click to hide", off: "Hidden · click to show only these", only: "Showing only these · click to include normally" };
 
-const TagFilters = ({ filtersList, setFilters, children }) => {
-  const [filters, setFilter] = useState(filtersList);
+// Filters cycle on -> off -> only -> on (used by the pills and the header's costume button)
+export const cycleFilter = (filters, key) => {
+  if (filters.only === key) return { ...filters, only: null, [key]: true };
+  if (filters[key]) return { ...filters, [key]: false };
+  return { ...filters, only: key };
+};
 
-  useEffect(() => {
-    if (setFilters) setFilters(filters);
-    // Save filters to localStorage
-    try {
-      localStorage.setItem("pokemonFilters", JSON.stringify(filters));
-    } catch (e) {
-      console.error("Error saving filters to localStorage:", e);
-    }
-  }, [filters, setFilters]);
+export const filterState = (filters, key) => (filters.only === key ? "only" : filters[key] ? "on" : "off");
 
-  // Pills cycle on -> off -> only -> on; costume has no "only" (it is already a mode)
-  const handleClick = (key) => {
-    setFilter((current) => {
-      if (current.only === key) return { ...current, only: null, [key]: true };
-      if (current[key] || key === "costume") return { ...current, [key]: !current[key] };
-      return { ...current, only: key };
-    });
-  };
-
-  const stateOf = (key) => (filters.only === key ? "only" : filters[key] ? "on" : "off");
+const TagFilters = ({ filters, setFilters, children }) => {
+  const handleClick = (key) => setFilters((current) => cycleFilter(current, key));
+  const stateOf = (key) => filterState(filters, key);
 
   return (
     <Box
@@ -128,13 +113,12 @@ const TagFilters = ({ filtersList, setFilters, children }) => {
       {chipKeys.map((key) => {
         const state = stateOf(key);
         return (
-          <Tooltip key={key} title={key === "costume" ? "" : pillTooltip[state]} enterDelay={800} disableInteractive>
+          <Tooltip key={key} title={pillTooltip[state]} enterDelay={800} disableInteractive>
             <Chip
               label={state === "only" ? `only ${key}` : key}
               size="small"
               clickable
-              // costume is a mode: when on it shows only costumes, so it uses the "only" colour
-              color={state === "only" || (key === "costume" && state === "on") ? "warning" : state === "on" ? "primary" : "default"}
+              color={state === "only" ? "warning" : state === "on" ? "primary" : "default"}
               onClick={() => handleClick(key)}
               sx={{ margin: "2px" }}
             />

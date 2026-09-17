@@ -33,9 +33,12 @@ export function buildAncestors(pokemonData) {
 // choice between evolutions
 const isBattleForm = (p) => /(^|-)(mega(-[xyz])?|primal|gmax)$/.test(p.form || "");
 
-// id -> Set of what a hundo of it is sure to become: evolutions followed only while
-// there is a single evolution path (Poliwag -> Poliwhirl, then Poliwrath or Politoed
-// is a choice, so it stops), plus Mega/Primal/Gigantamax forms along the way
+// What each Pokemon can evolve into, in two flavours:
+// - single: what a hundo is sure to become. Evolutions are followed only while there
+//   is a single evolution path (Poliwag -> Poliwhirl, then Poliwrath or Politoed is a
+//   choice, so it stops)
+// - all: every evolution, including all branches (Eevee -> all Eeveelutions)
+// Both include Mega/Primal/Gigantamax forms along the way; totems are never followed.
 export function buildDescendants(pokemonData) {
   const byId = new Map((pokemonData || []).map((p) => [p.id, p]));
   const children = new Map();
@@ -46,35 +49,55 @@ export function buildDescendants(pokemonData) {
     })
   );
 
-  const descendants = new Map();
-  const collect = (id, result, seen) => {
-    // Totems can't be obtained, so they are never followed
-    const kids = (children.get(id) || []).filter((c) => !seen.has(c) && !/totem/.test(byId.get(c).form || ""));
-    const battleForms = kids.filter((c) => isBattleForm(byId.get(c)));
-    const evolutions = kids.filter((c) => !isBattleForm(byId.get(c)));
-    battleForms.forEach((c) => result.add(c));
-    if (evolutions.length === 1) {
-      seen.add(evolutions[0]);
-      result.add(evolutions[0]);
-      collect(evolutions[0], result, seen);
-    }
+  const build = (followBranches) => {
+    const descendants = new Map();
+    const collect = (id, result, seen) => {
+      const kids = (children.get(id) || []).filter((c) => !seen.has(c) && !/totem/.test(byId.get(c).form || ""));
+      const battleForms = kids.filter((c) => isBattleForm(byId.get(c)));
+      const evolutions = kids.filter((c) => !isBattleForm(byId.get(c)));
+      battleForms.forEach((c) => result.add(c));
+      if (evolutions.length === 1 || followBranches) {
+        evolutions.forEach((c) => {
+          seen.add(c);
+          result.add(c);
+          collect(c, result, seen);
+        });
+      }
+    };
+    byId.forEach((_, id) => {
+      const result = new Set();
+      collect(id, result, new Set([id]));
+      if (result.size) descendants.set(id, result);
+    });
+    return descendants;
   };
-  byId.forEach((_, id) => {
-    const result = new Set();
-    collect(id, result, new Set([id]));
-    if (result.size) descendants.set(id, result);
+  // Other forms sharing a Pokedex number (regional and other forms, not costumes)
+  const sameDex = new Map();
+  byId.forEach((p) => {
+    if (p.costume || p.dex === undefined) return;
+    if (!sameDex.has(p.dex)) sameDex.set(p.dex, []);
+    sameDex.get(p.dex).push(p.id);
   });
-  return descendants;
+  const formsOf = new Map();
+  byId.forEach((p) => formsOf.set(p.id, p.costume ? [] : sameDex.get(p.dex) || []));
+
+  return { single: build(false), all: build(true), formsOf };
 }
 
-// A collection's ids for the current variant mode (e.g. shundos), plus what they
-// surely evolve into when "related" is on. Only upwards: a hundo Clefairy can become
-// Clefable, but never Cleffa.
+// A collection's ids for the current variant mode (e.g. shundos), plus what they evolve
+// into when "related" is on. Only upwards: a hundo Clefairy can become Clefable, never
+// Cleffa. A starred collection shows every evolution path, so branches can be marked
+// while evolving, plus every form sharing a Pokedex number (regional and other forms),
+// so a variant picked by mistake can be corrected. A hidden one only hides what the
+// hundo is sure to become.
 export function getCollectionIds(collection, descendants, variantMode) {
   const ids = getOwnedIds(collection, variantMode);
   if (!collection.related || !descendants) return ids;
+  const starred = collection.visibility === "show";
+  const map = starred ? descendants.all : descendants.single;
   const result = new Set(ids);
-  ids.forEach((id) => (descendants.get(id) || []).forEach((child) => result.add(child)));
+  ids.forEach((id) => (map.get(id) || []).forEach((child) => result.add(child)));
+  if (starred) [...result].forEach((id) => (descendants.formsOf.get(id) || []).forEach((form) => result.add(form)));
   return [...result];
 }
 

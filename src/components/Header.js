@@ -16,6 +16,8 @@ import UndoIcon from "@mui/icons-material/Undo";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DynamaxIcon, { DYNAMAX_COLOR } from "./DynamaxIcon";
+import ShadowIcon, { SHADOW_COLOR } from "./ShadowIcon";
+import CheckroomIcon from "@mui/icons-material/Checkroom";
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -49,6 +51,13 @@ const PanelButtons = styled(Box)(({ theme }) => ({
   },
 }));
 
+// Matches the costume pill's three states
+const costumeTooltip = {
+  off: "Costumes hidden · click to show only costumes",
+  only: "Showing only costumes · click to mix them in",
+  on: "Costumes shown · click to hide them",
+};
+
 const panels = [
   { id: "filters", label: "filters", Icon: FilterListIcon },
   { id: "info", label: "sort", Icon: SortIcon },
@@ -66,6 +75,10 @@ export default function Header(props) {
     setShowShiny,
     showDynamax,
     setShowDynamax,
+    showShadow,
+    setShowShadow,
+    costumeState,
+    cycleCostume,
     lastAction,
     handleUndo,
     themeMode,
@@ -130,6 +143,38 @@ export default function Header(props) {
                 sx={{
                   opacity: showShiny ? 1 : 0.5,
                   color: showShiny ? "#ffd54f" : "inherit",
+                }}
+              />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={costumeTooltip[costumeState]}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle costumes"
+              aria-pressed={costumeState !== "off"}
+              onClick={cycleCostume}
+              sx={{ mr: 1 }}
+            >
+              <CheckroomIcon
+                sx={{
+                  opacity: costumeState === "off" ? 0.5 : 1,
+                  color: costumeState === "only" ? "warning.main" : "inherit",
+                }}
+              />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={showShadow ? "Show regular hundos" : "Show Shadow hundos"}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle shadow"
+              aria-pressed={showShadow}
+              onClick={() => setShowShadow(!showShadow)}
+              sx={{ mr: 1 }}
+            >
+              <ShadowIcon
+                sx={{
+                  opacity: showShadow ? 1 : 0.5,
+                  color: showShadow ? SHADOW_COLOR : "inherit",
                 }}
               />
             </IconButton>

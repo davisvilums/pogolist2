@@ -3,6 +3,7 @@ import { styled, alpha } from "@mui/material/styles";
 import Check from "@mui/icons-material/CheckBox";
 import AutoAwesome from "@mui/icons-material/AutoAwesome";
 import DynamaxIcon, { DYNAMAX_COLOR } from "./DynamaxIcon";
+import ShadowIcon, { SHADOW_COLOR } from "./ShadowIcon";
 
 const PokemonItem = styled("div")`
   border: 1px solid ${({ theme }) => theme.palette.divider};
@@ -177,6 +178,9 @@ function PokemonCard({ pokemon, selected, showSelection = true, variantBadges = 
       <PokemonID>#{pokemon.id}</PokemonID>
       {/* Only the picture and the G/checkbox badge select; the text stays selectable */}
       <PokemonGeneration onClick={select}>
+        {variantBadges.includes("shadow") && (
+          <ShadowIcon sx={{ fontSize: 15, color: SHADOW_COLOR, verticalAlign: "top", mt: "4px" }} />
+        )}
         {variantBadges.includes("dynamax") && (
           <DynamaxIcon sx={{ fontSize: 15, color: DYNAMAX_COLOR, verticalAlign: "top", mt: "4px" }} />
         )}

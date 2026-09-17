@@ -134,8 +134,12 @@ function SortableItem({
               <Tooltip
                 title={
                   item.related
-                    ? "Evolutions included (single evolution paths only)"
-                    : "Include evolutions (single evolution paths only)"
+                    ? item.visibility === "show"
+                      ? "Evolutions and forms included (all evolution paths, regional and other forms)"
+                      : "Evolutions included (single evolution paths only)"
+                    : item.visibility === "show"
+                      ? "Include evolutions and forms (all evolution paths, regional and other forms)"
+                      : "Include evolutions (single evolution paths only)"
                 }
                 {...rowTooltipProps}
               >

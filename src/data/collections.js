@@ -1,11 +1,12 @@
-// Collection membership with variants (shiny, Dynamax and combinations).
+// Collection membership with variants (shiny, Dynamax, Shadow and combinations).
 // A collection keeps hundos in `pokemon` and variant hundos in `variants`, keyed by
 // the sorted variant names: { shiny: [...], dynamax: [...], "dynamax+shiny": [...] }.
 // The active variant mode (e.g. "dynamax+shiny", or "" for none) decides what a
 // collection means. Owning a variant also counts for every mode it contains:
 // a shiny Dynamax hundo is also a shundo, a Dynamax hundo and a hundo.
 
-export const VARIANTS = ["dynamax", "shiny"];
+// Sorted, so combination keys are always e.g. "dynamax+shadow+shiny"
+export const VARIANTS = ["dynamax", "shadow", "shiny"];
 
 export const variantModeKey = (activeVariants) => VARIANTS.filter((v) => activeVariants[v]).join("+");
 

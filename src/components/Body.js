@@ -11,7 +11,7 @@ import AddIcon from "@mui/icons-material/Add";
 import Tooltip from "@mui/material/Tooltip";
 import { styled } from "@mui/material/styles";
 import PokemonCard from "./PokemonCard";
-import { TagFilters, EvolutionFilters, filtersList, runFilters } from "./TagFilters";
+import { TagFilters, EvolutionFilters, runFilters } from "./TagFilters";
 import {
   buildAncestors,
   buildDescendants,
@@ -108,6 +108,8 @@ export default function Body({
   selected,
   setSelected,
   activePanel,
+  filters,
+  setFilters,
   searchTerm,
   setSearchTerm,
   searchRelated,
@@ -135,7 +137,6 @@ export default function Body({
   const [page, setPage] = React.useState(0);
   const [itemsPerPage, setItemsPerPage] = React.useState(50);
   const [warning, setWarning] = React.useState("");
-  const [filters, setFilters] = React.useState(filtersList);
   const [rows, setRows] = React.useState(data);
   const ref = React.useRef(null);
   const ancestors = React.useMemo(() => buildAncestors(data), [data]);
@@ -261,7 +262,7 @@ export default function Body({
         )}
         {activePanel === "filters" && (
           <FiltersPanel>
-            <TagFilters filtersList={filters} setFilters={setFilters}>
+            <TagFilters filters={filters} setFilters={setFilters}>
               <EvolutionFilters rules={evolutionRules} setRules={setEvolutionRules} />
             </TagFilters>
             <FilterSetChips
